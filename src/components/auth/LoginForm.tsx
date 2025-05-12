@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { Mail, Lock, QrCode, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, QrCode, Loader2, Eye, EyeOff, UserCircle2 } from 'lucide-react';
 import { Icons } from '../../components/ui/icons';
 
 // Sample users data - In a real app, this would come from an API/database
@@ -100,6 +101,16 @@ const LoginForm = () => {
     });
   };
 
+  const fillAdminCredentials = () => {
+    setEmail('admin@nust.ac.zw');
+    setPassword('admin123');
+  };
+
+  const fillLecturerCredentials = () => {
+    setEmail('lecturer@nust.ac.zw');
+    setPassword('lecturer123');
+  };
+
   return (
     <div className="w-full max-w-md mx-auto">
       <Tabs defaultValue="email" className="w-full">
@@ -181,6 +192,27 @@ const LoginForm = () => {
                 </>
               ) : 'Login'}
             </Button>
+
+            <div className="flex gap-2 pt-2">
+              <Button 
+                type="button"
+                variant="outline"
+                className="flex-1 text-xs"
+                onClick={fillAdminCredentials}
+              >
+                <UserCircle2 className="mr-1 h-4 w-4" />
+                Admin Login
+              </Button>
+              <Button 
+                type="button"
+                variant="outline"
+                className="flex-1 text-xs"
+                onClick={fillLecturerCredentials}
+              >
+                <UserCircle2 className="mr-1 h-4 w-4" />
+                Lecturer Login
+              </Button>
+            </div>
           </form>
         </TabsContent>
         
