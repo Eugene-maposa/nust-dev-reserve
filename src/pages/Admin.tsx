@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Layout from '@/components/layout/Layout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -1016,4 +1017,1054 @@ const Admin = () => {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {filteredBookings.
+                        {filteredBookings.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                              No bookings found
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredBookings.map((booking) => (
+                            <TableRow key={booking.id}>
+                              <TableCell className="font-medium">{booking.room_name}</TableCell>
+                              <TableCell>{booking.user_name}</TableCell>
+                              <TableCell>{formatDate(booking.date)}</TableCell>
+                              <TableCell>{booking.time_slot}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center">
+                                  {booking.status === 'pending' ? (
+                                    <Clock className="h-4 w-4 mr-1 text-yellow-500" />
+                                  ) : booking.status === 'approved' ? (
+                                    <CheckCircle2 className="h-4 w-4 mr-1 text-green-500" />
+                                  ) : booking.status === 'rejected' ? (
+                                    <AlertCircle className="h-4 w-4 mr-1 text-red-500" />
+                                  ) : (
+                                    <AlertCircle className="h-4 w-4 mr-1 text-gray-500" />
+                                  )}
+                                  <span className="capitalize">{booking.status}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="max-w-[200px] truncate">
+                                {booking.purpose || 'N/A'}
+                              </TableCell>
+                              <TableCell>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                      <MoreVertical className="h-4 w-4" />
+                                    </Button>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent align="end">
+                                    {booking.status === 'pending' && (
+                                      <>
+                                        <DropdownMenuItem onClick={() => handleBookingAction(booking, 'approve')}>
+                                          <CheckCircle2 className="h-4 w-4 mr-2" /> Approve
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={() => handleBookingAction(booking, 'reject')}>
+                                          <AlertCircle className="h-4 w-4 mr-2" /> Reject
+                                        </DropdownMenuItem>
+                                      </>
+                                    )}
+                                    {(booking.status === 'approved' || booking.status === 'pending') && (
+                                      <DropdownMenuItem onClick={() => handleBookingAction(booking, 'cancel')}>
+                                        <Trash2 className="h-4 w-4 mr-2" /> Cancel
+                                      </DropdownMenuItem>
+                                    )}
+                                    <DropdownMenuItem onClick={() => handleDeleteConfirm(booking.id, 'booking')}>
+                                      <Trash2 className="h-4 w-4 mr-2 text-red-500" /> Delete
+                                    </DropdownMenuItem>
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="users" className="space-y-4">
+                <div className="flex justify-end mb-4">
+                  <Button onClick={() => setIsAddUserOpen(true)}>
+                    <UserPlus className="h-4 w-4 mr-2" /> Add User
+                  </Button>
+                </div>
+                <Card>
+                  <CardContent className="p-6">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Student ID</TableHead>
+                          <TableHead>Phone</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Created</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredUsers.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
+                              No users found
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredUsers.map((user) => (
+                            <TableRow key={user.id}>
+                              <TableCell className="font-medium">{user.email}</TableCell>
+                              <TableCell>{user.full_name || 'N/A'}</TableCell>
+                              <TableCell>{user.student_number || 'N/A'}</TableCell>
+                              <TableCell>{user.phone || 'N/A'}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center">
+                                  {user.role === 'admin' ? (
+                                    <Shield className="h-4 w-4 mr-1 text-blue-500" />
+                                  ) : (
+                                    <Users className="h-4 w-4 mr-1 text-green-500" />
+                                  )}
+                                  <span className="capitalize">{user.role}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>{formatDate(user.created_at)}</TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  <Button variant="outline" size="icon" onClick={() => handleEditUser(user)}>
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="outline" size="icon" onClick={() => handleDeleteConfirm(user.id, 'user')}>
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="resources" className="space-y-4">
+                <div className="flex justify-end mb-4">
+                  <Button onClick={() => setIsAddResourceOpen(true)}>
+                    <Plus className="h-4 w-4 mr-2" /> Add Resource
+                  </Button>
+                </div>
+                <Card>
+                  <CardContent className="p-6">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Capacity</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredRooms.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                              No resources found
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          filteredRooms.map((room) => (
+                            <TableRow key={room.id}>
+                              <TableCell className="font-medium">{room.name}</TableCell>
+                              <TableCell>{room.type}</TableCell>
+                              <TableCell>{room.capacity || 'N/A'}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center">
+                                  {room.status === 'available' ? (
+                                    <CheckCircle2 className="h-4 w-4 mr-1 text-green-500" />
+                                  ) : room.status === 'in-use' ? (
+                                    <Clock className="h-4 w-4 mr-1 text-blue-500" />
+                                  ) : (
+                                    <AlertCircle className="h-4 w-4 mr-1 text-red-500" />
+                                  )}
+                                  <span className="capitalize">{room.status}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="max-w-[200px] truncate">{room.description || 'N/A'}</TableCell>
+                              <TableCell>
+                                <div className="flex gap-2">
+                                  <Button variant="outline" size="icon" onClick={() => handleEditRoom(room)}>
+                                    <Edit className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="outline" size="icon" onClick={() => handleDeleteConfirm(room.id, 'room')}>
+                                    <Trash2 className="h-4 w-4 text-red-500" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="settings" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>System Settings</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Button 
+                        variant="outline" 
+                        className="flex justify-between w-full p-4 h-auto" 
+                        onClick={() => setIsEmailSettingsOpen(true)}
+                      >
+                        <div className="flex items-center">
+                          <Bell className="h-5 w-5 mr-2" />
+                          <div className="text-left">
+                            <h3 className="font-medium">Email Notifications</h3>
+                            <p className="text-sm text-muted-foreground">Configure automatic email alerts</p>
+                          </div>
+                        </div>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        className="flex justify-between w-full p-4 h-auto" 
+                        onClick={() => setIsBookingRulesOpen(true)}
+                      >
+                        <div className="flex items-center">
+                          <Calendar className="h-5 w-5 mr-2" />
+                          <div className="text-left">
+                            <h3 className="font-medium">Booking Rules</h3>
+                            <p className="text-sm text-muted-foreground">Set booking restrictions and policies</p>
+                          </div>
+                        </div>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        className="flex justify-between w-full p-4 h-auto" 
+                        onClick={() => setIsMaintenanceOpen(true)}
+                      >
+                        <div className="flex items-center">
+                          <Settings className="h-5 w-5 mr-2" />
+                          <div className="text-left">
+                            <h3 className="font-medium">Maintenance Schedule</h3>
+                            <p className="text-sm text-muted-foreground">Plan system maintenance windows</p>
+                          </div>
+                        </div>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        className="flex justify-between w-full p-4 h-auto" 
+                        onClick={() => setIsPermissionsOpen(true)}
+                      >
+                        <div className="flex items-center">
+                          <Shield className="h-5 w-5 mr-2" />
+                          <div className="text-left">
+                            <h3 className="font-medium">User Permissions</h3>
+                            <p className="text-sm text-muted-foreground">Manage access control settings</p>
+                          </div>
+                        </div>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        className="flex justify-between w-full p-4 h-auto" 
+                        onClick={() => setIsReportsOpen(true)}
+                      >
+                        <div className="flex items-center">
+                          <BarChart className="h-5 w-5 mr-2" />
+                          <div className="text-left">
+                            <h3 className="font-medium">Reports & Analytics</h3>
+                            <p className="text-sm text-muted-foreground">Configure system reporting</p>
+                          </div>
+                        </div>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                      
+                      <Button 
+                        variant="outline" 
+                        className="flex justify-between w-full p-4 h-auto" 
+                        onClick={() => setIsLogsOpen(true)}
+                      >
+                        <div className="flex items-center">
+                          <FileText className="h-5 w-5 mr-2" />
+                          <div className="text-left">
+                            <h3 className="font-medium">System Logs</h3>
+                            <p className="text-sm text-muted-foreground">View activity and error logs</p>
+                          </div>
+                        </div>
+                        <ChevronDown className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </>
+          )}
+        </Tabs>
+      </div>
+
+      {/* Add User Dialog */}
+      <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+            <DialogDescription>
+              Create a new user account. All fields with * are required.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email *</Label>
+              <Input
+                id="email"
+                value={newUser.email}
+                onChange={(e) => setNewUser({...newUser, email: e.target.value})}
+                placeholder="user@example.com"
+              />
+              {formErrors.email && <p className="text-sm text-red-500">{formErrors.email}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input
+                id="fullName"
+                value={newUser.full_name || ''}
+                onChange={(e) => setNewUser({...newUser, full_name: e.target.value})}
+                placeholder="John Doe"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="studentNumber">Student Number</Label>
+              <Input
+                id="studentNumber"
+                value={newUser.student_number || ''}
+                onChange={(e) => setNewUser({...newUser, student_number: e.target.value})}
+                placeholder="2022XXXXX"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input
+                id="phone"
+                value={newUser.phone || ''}
+                onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
+                placeholder="+123456789"
+              />
+              {formErrors.phoneNumber && <p className="text-sm text-red-500">{formErrors.phoneNumber}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="role">Role *</Label>
+              <Select 
+                value={newUser.role} 
+                onValueChange={(value) => setNewUser({...newUser, role: value as 'admin' | 'user'})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="password">Password *</Label>
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={newUser.password || ''}
+                  onChange={(e) => setNewUser({...newUser, password: e.target.value})}
+                  placeholder="Enter password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {formErrors.password && <p className="text-sm text-red-500">{formErrors.password}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="confirmPassword">Confirm Password *</Label>
+              <div className="relative">
+                <Input
+                  id="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={newUser.confirmPassword || ''}
+                  onChange={(e) => setNewUser({...newUser, confirmPassword: e.target.value})}
+                  placeholder="Confirm password"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {formErrors.confirmPassword && <p className="text-sm text-red-500">{formErrors.confirmPassword}</p>}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsAddUserOpen(false);
+              resetNewUserForm();
+              setFormErrors({});
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddUser}>Create User</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update user information. Leave password blank to keep current.
+            </DialogDescription>
+          </DialogHeader>
+          {editedUser && (
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-email">Email</Label>
+                <Input
+                  id="edit-email"
+                  value={editedUser.email}
+                  onChange={(e) => setEditedUser({...editedUser, email: e.target.value})}
+                />
+                {formErrors.email && <p className="text-sm text-red-500">{formErrors.email}</p>}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-fullName">Full Name</Label>
+                <Input
+                  id="edit-fullName"
+                  value={editedUser.full_name || ''}
+                  onChange={(e) => setEditedUser({...editedUser, full_name: e.target.value})}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-studentNumber">Student Number</Label>
+                <Input
+                  id="edit-studentNumber"
+                  value={editedUser.student_number || ''}
+                  onChange={(e) => setEditedUser({...editedUser, student_number: e.target.value})}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-phone">Phone Number</Label>
+                <Input
+                  id="edit-phone"
+                  value={editedUser.phone || ''}
+                  onChange={(e) => setEditedUser({...editedUser, phone: e.target.value})}
+                />
+                {formErrors.phoneNumber && <p className="text-sm text-red-500">{formErrors.phoneNumber}</p>}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-role">Role</Label>
+                <Select 
+                  value={editedUser.role} 
+                  onValueChange={(value) => setEditedUser({...editedUser, role: value as 'admin' | 'user'})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="user">User</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-password">New Password (optional)</Label>
+                <div className="relative">
+                  <Input
+                    id="edit-password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={editedUser.password || ''}
+                    onChange={(e) => setEditedUser({...editedUser, password: e.target.value})}
+                    placeholder="Leave blank to keep current"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0"
+                    onClick={() => setShowPassword(!showPassword)}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+                {formErrors.password && <p className="text-sm text-red-500">{formErrors.password}</p>}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-confirmPassword">Confirm New Password</Label>
+                <div className="relative">
+                  <Input
+                    id="edit-confirmPassword"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={editedUser.confirmPassword || ''}
+                    onChange={(e) => setEditedUser({...editedUser, confirmPassword: e.target.value})}
+                    placeholder="Confirm new password"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </Button>
+                </div>
+                {formErrors.confirmPassword && <p className="text-sm text-red-500">{formErrors.confirmPassword}</p>}
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsEditUserOpen(false);
+              setSelectedUser(null);
+              setEditedUser(null);
+              setFormErrors({});
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateUser}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Resource Dialog */}
+      <Dialog open={isAddResourceOpen} onOpenChange={setIsAddResourceOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New Resource</DialogTitle>
+            <DialogDescription>
+              Add a new room or resource to the system.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="resource-name">Name *</Label>
+              <Input
+                id="resource-name"
+                value={newRoom.name}
+                onChange={(e) => setNewRoom({...newRoom, name: e.target.value})}
+                placeholder="Lab A - Workstation 1"
+              />
+              {formErrors.name && <p className="text-sm text-red-500">{formErrors.name}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="resource-type">Type *</Label>
+              <Input
+                id="resource-type"
+                value={newRoom.type}
+                onChange={(e) => setNewRoom({...newRoom, type: e.target.value})}
+                placeholder="Workstation, Room, Equipment"
+              />
+              {formErrors.type && <p className="text-sm text-red-500">{formErrors.type}</p>}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="resource-capacity">Capacity</Label>
+              <Input
+                id="resource-capacity"
+                type="number"
+                value={newRoom.capacity?.toString() || ''}
+                onChange={(e) => setNewRoom({...newRoom, capacity: e.target.value ? parseInt(e.target.value) : undefined})}
+                placeholder="1"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="resource-status">Status</Label>
+              <Select 
+                value={newRoom.status} 
+                onValueChange={(value) => setNewRoom({...newRoom, status: value as 'available' | 'in-use' | 'maintenance'})}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="available">Available</SelectItem>
+                  <SelectItem value="in-use">In Use</SelectItem>
+                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="resource-description">Description</Label>
+              <Textarea
+                id="resource-description"
+                value={newRoom.description || ''}
+                onChange={(e) => setNewRoom({...newRoom, description: e.target.value})}
+                placeholder="Describe the resource..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsAddResourceOpen(false);
+              setNewRoom({
+                name: '',
+                type: '',
+                status: 'available',
+                capacity: undefined,
+                description: '',
+              });
+              setFormErrors({});
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddRoom}>Add Resource</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Resource Dialog */}
+      <Dialog open={isEditResourceOpen} onOpenChange={setIsEditResourceOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit Resource</DialogTitle>
+            <DialogDescription>
+              Update resource information.
+            </DialogDescription>
+          </DialogHeader>
+          {editedRoom && (
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-resource-name">Name</Label>
+                <Input
+                  id="edit-resource-name"
+                  value={editedRoom.name}
+                  onChange={(e) => setEditedRoom({...editedRoom, name: e.target.value})}
+                />
+                {formErrors.name && <p className="text-sm text-red-500">{formErrors.name}</p>}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-resource-type">Type</Label>
+                <Input
+                  id="edit-resource-type"
+                  value={editedRoom.type}
+                  onChange={(e) => setEditedRoom({...editedRoom, type: e.target.value})}
+                />
+                {formErrors.type && <p className="text-sm text-red-500">{formErrors.type}</p>}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-resource-capacity">Capacity</Label>
+                <Input
+                  id="edit-resource-capacity"
+                  type="number"
+                  value={editedRoom.capacity?.toString() || ''}
+                  onChange={(e) => setEditedRoom({...editedRoom, capacity: e.target.value ? parseInt(e.target.value) : undefined})}
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-resource-status">Status</Label>
+                <Select 
+                  value={editedRoom.status} 
+                  onValueChange={(value) => setEditedRoom({...editedRoom, status: value as 'available' | 'in-use' | 'maintenance'})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="available">Available</SelectItem>
+                    <SelectItem value="in-use">In Use</SelectItem>
+                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-resource-description">Description</Label>
+                <Textarea
+                  id="edit-resource-description"
+                  value={editedRoom.description || ''}
+                  onChange={(e) => setEditedRoom({...editedRoom, description: e.target.value})}
+                />
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsEditResourceOpen(false);
+              setSelectedRoom(null);
+              setEditedRoom(null);
+              setFormErrors({});
+            }}>
+              Cancel
+            </Button>
+            <Button onClick={handleUpdateRoom}>Save Changes</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Booking Action Dialog */}
+      <Dialog open={isBookingActionDialogOpen} onOpenChange={setIsBookingActionDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>
+              {bookingAction === 'approve' ? 'Approve Booking' : 
+               bookingAction === 'reject' ? 'Reject Booking' : 
+               'Cancel Booking'}
+            </DialogTitle>
+            <DialogDescription>
+              {bookingAction === 'approve' ? 'Confirm you want to approve this booking.' : 
+               bookingAction === 'reject' ? 'Provide a reason for rejecting this booking.' : 
+               'Confirm you want to cancel this booking.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            {selectedBooking && (
+              <div className="space-y-2 mb-4">
+                <div className="flex justify-between">
+                  <span className="font-medium">Room:</span>
+                  <span>{selectedBooking.room_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">User:</span>
+                  <span>{selectedBooking.user_name}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Date:</span>
+                  <span>{formatDate(selectedBooking.date)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="font-medium">Time:</span>
+                  <span>{selectedBooking.time_slot}</span>
+                </div>
+              </div>
+            )}
+            
+            {bookingAction === 'reject' && (
+              <div className="grid gap-2">
+                <Label htmlFor="rejection-reason">Reason for Rejection</Label>
+                <Textarea
+                  id="rejection-reason"
+                  value={rejectionReason}
+                  onChange={(e) => setRejectionReason(e.target.value)}
+                  placeholder="Please provide a reason..."
+                />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => {
+              setIsBookingActionDialogOpen(false);
+              setSelectedBooking(null);
+              setBookingAction(null);
+              setRejectionReason('');
+            }}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={confirmBookingAction}
+              variant={bookingAction === 'reject' || bookingAction === 'cancel' ? 'destructive' : 'default'}
+            >
+              {bookingAction === 'approve' ? 'Approve' : 
+               bookingAction === 'reject' ? 'Reject' : 
+               'Cancel Booking'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Settings Dialog */}
+      <Dialog open={isEmailSettingsOpen} onOpenChange={setIsEmailSettingsOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Email Notification Settings</DialogTitle>
+            <DialogDescription>
+              Configure when email notifications are sent.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="booking-confirmation" className="text-base">Booking Confirmations</Label>
+                <p className="text-sm text-muted-foreground">Send when bookings are confirmed</p>
+              </div>
+              <Switch 
+                id="booking-confirmation" 
+                checked={emailSettings.bookingConfirmation}
+                onCheckedChange={(checked) => setEmailSettings({...emailSettings, bookingConfirmation: checked})}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="booking-reminder" className="text-base">Booking Reminders</Label>
+                <p className="text-sm text-muted-foreground">Send 24 hours before bookings</p>
+              </div>
+              <Switch 
+                id="booking-reminder" 
+                checked={emailSettings.bookingReminder}
+                onCheckedChange={(checked) => setEmailSettings({...emailSettings, bookingReminder: checked})}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="booking-cancellation" className="text-base">Cancellation Notices</Label>
+                <p className="text-sm text-muted-foreground">Send when bookings are cancelled</p>
+              </div>
+              <Switch 
+                id="booking-cancellation" 
+                checked={emailSettings.bookingCancellation}
+                onCheckedChange={(checked) => setEmailSettings({...emailSettings, bookingCancellation: checked})}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="system-updates" className="text-base">System Updates</Label>
+                <p className="text-sm text-muted-foreground">Send notifications about system changes</p>
+              </div>
+              <Switch 
+                id="system-updates" 
+                checked={emailSettings.systemUpdates}
+                onCheckedChange={(checked) => setEmailSettings({...emailSettings, systemUpdates: checked})}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="maintenance-alerts" className="text-base">Maintenance Alerts</Label>
+                <p className="text-sm text-muted-foreground">Send notifications about scheduled maintenance</p>
+              </div>
+              <Switch 
+                id="maintenance-alerts" 
+                checked={emailSettings.maintenanceAlerts}
+                onCheckedChange={(checked) => setEmailSettings({...emailSettings, maintenanceAlerts: checked})}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEmailSettingsOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleEmailSettingsUpdate}>Save Settings</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Booking Rules Dialog */}
+      <Dialog open={isBookingRulesOpen} onOpenChange={setIsBookingRulesOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Booking Rules & Restrictions</DialogTitle>
+            <DialogDescription>
+              Configure booking limitations and approval process.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="max-duration">Maximum Duration (hours)</Label>
+              <Input 
+                id="max-duration" 
+                type="number" 
+                value={bookingRules.maxDuration} 
+                onChange={(e) => setBookingRules({...bookingRules, maxDuration: parseInt(e.target.value) || 1})}
+                min="1"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="min-notice">Minimum Notice (hours)</Label>
+              <Input 
+                id="min-notice" 
+                type="number" 
+                value={bookingRules.minNotice} 
+                onChange={(e) => setBookingRules({...bookingRules, minNotice: parseInt(e.target.value) || 0})}
+                min="0"
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="max-advance">Maximum Advance Booking (days)</Label>
+              <Input 
+                id="max-advance" 
+                type="number" 
+                value={bookingRules.maxAdvance} 
+                onChange={(e) => setBookingRules({...bookingRules, maxAdvance: parseInt(e.target.value) || 1})}
+                min="1"
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="allow-recurring" className="text-base">Allow Recurring Bookings</Label>
+                <p className="text-sm text-muted-foreground">Enable weekly/monthly recurring bookings</p>
+              </div>
+              <Switch 
+                id="allow-recurring" 
+                checked={bookingRules.allowRecurring}
+                onCheckedChange={(checked) => setBookingRules({...bookingRules, allowRecurring: checked})}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="require-approval" className="text-base">Require Admin Approval</Label>
+                <p className="text-sm text-muted-foreground">All bookings need administrator approval</p>
+              </div>
+              <Switch 
+                id="require-approval" 
+                checked={bookingRules.requireApproval}
+                onCheckedChange={(checked) => setBookingRules({...bookingRules, requireApproval: checked})}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBookingRulesOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleBookingRulesUpdate}>Save Rules</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Maintenance Schedule Dialog */}
+      <Dialog open={isMaintenanceOpen} onOpenChange={setIsMaintenanceOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Maintenance Schedule</DialogTitle>
+            <DialogDescription>
+              Configure system maintenance windows and notifications.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="next-maintenance">Next Maintenance Date</Label>
+              <Input 
+                id="next-maintenance" 
+                type="date" 
+                value={maintenanceSchedule.nextMaintenance} 
+                onChange={(e) => setMaintenanceSchedule({
+                  ...maintenanceSchedule, 
+                  nextMaintenance: e.target.value
+                })}
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="maintenance-interval">Maintenance Interval (days)</Label>
+              <Input 
+                id="maintenance-interval" 
+                type="number" 
+                value={maintenanceSchedule.maintenanceInterval} 
+                onChange={(e) => setMaintenanceSchedule({
+                  ...maintenanceSchedule, 
+                  maintenanceInterval: parseInt(e.target.value) || 30
+                })}
+                min="1"
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="notify-users" className="text-base">Notify Users</Label>
+                <p className="text-sm text-muted-foreground">Send maintenance alerts to all users</p>
+              </div>
+              <Switch 
+                id="notify-users" 
+                checked={maintenanceSchedule.notifyUsers}
+                onCheckedChange={(checked) => setMaintenanceSchedule({
+                  ...maintenanceSchedule, 
+                  notifyUsers: checked
+                })}
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div>
+                <Label htmlFor="notify-admins" className="text-base">Notify Administrators</Label>
+                <p className="text-sm text-muted-foreground">Send reminders to administrators</p>
+              </div>
+              <Switch 
+                id="notify-admins" 
+                checked={maintenanceSchedule.notifyAdmins}
+                onCheckedChange={(checked) => setMaintenanceSchedule({
+                  ...maintenanceSchedule, 
+                  notifyAdmins: checked
+                })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsMaintenanceOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleMaintenanceUpdate}>Save Schedule</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm User Update Dialog */}
+      <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to update this user's information?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmUpdateUser}>Confirm</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              {itemToDelete?.type === 'user' ? 
+                "Are you sure you want to delete this user? This action cannot be undone." :
+              itemToDelete?.type === 'room' ? 
+                "Are you sure you want to delete this resource? This action cannot be undone." :
+                "Are you sure you want to delete this booking? This action cannot be undone."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete}
+              className="bg-red-500 hover:bg-red-600"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Layout>
+  );
+};
+
+export default Admin;
