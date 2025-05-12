@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Layout from '@/components/layout/Layout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -75,50 +76,50 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useNavigate } from 'react-router-dom';
+import { supabase } from "@/integrations/supabase/client";
+import { format } from 'date-fns';
 
 // Types
 interface User {
   id: string;
-  name: string;
   email: string;
-  role: 'admin' | 'lecturer' | 'student';
-  department: string;
-  status: 'active' | 'inactive' | 'suspended' | 'pending';
-  permissions: {
-    canBook: boolean;
-    canManageUsers: boolean;
-    canManageResources: boolean;
-    canManageBookings: boolean;
-  };
-  phoneNumber?: string;
-  studentId?: string;
-  staffId?: string;
-  notes?: string;
-  password?: string;
-  lastLogin?: string;
+  full_name?: string;
+  student_number?: string;
+  phone?: string;
+  role: 'admin' | 'user';
+  created_at: string;
+  last_sign_in_at?: string;
 }
 
-interface UserFormData extends Omit<User, 'id' | 'lastLogin'> {
+interface UserFormData {
+  full_name?: string;
+  student_number?: string;
+  email: string;
+  phone?: string;
+  role: 'admin' | 'user';
+  password?: string;
   confirmPassword?: string;
 }
 
 interface Booking {
   id: string;
-  resource: string;
-  user: string;
+  room_name: string;
+  user_name: string;
+  user_id: string;
   date: string;
-  time: string;
+  time_slot: string;
+  purpose?: string;
   status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled';
-  purpose: string;
+  created_at: string;
 }
 
-interface Resource {
+interface Room {
   id: string;
   name: string;
   type: string;
   status: 'available' | 'in-use' | 'maintenance';
-  lastMaintenance: string;
   capacity?: number;
+  description?: string;
 }
 
 const Admin = () => {
@@ -127,12 +128,17 @@ const Admin = () => {
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
   const [isAddResourceOpen, setIsAddResourceOpen] = useState(false);
+  const [isEditResourceOpen, setIsEditResourceOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
   const [editedUser, setEditedUser] = useState<UserFormData | null>(null);
+  const [editedRoom, setEditedRoom] = useState<Room | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [activeTab, setActiveTab] = useState('bookings');
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'user' | 'room' | 'booking' } | null>(null);
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [isEmailSettingsOpen, setIsEmailSettingsOpen] = useState(false);
   const [isBookingRulesOpen, setIsBookingRulesOpen] = useState(false);
@@ -142,6 +148,7 @@ const Admin = () => {
   const [isLogsOpen, setIsLogsOpen] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Email notification settings
   const [emailSettings, setEmailSettings] = useState({
@@ -175,140 +182,176 @@ const Admin = () => {
   const [bookingAction, setBookingAction] = useState<'approve' | 'reject' | 'cancel' | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
+  // Data state
+  const [users, setUsers] = useState<User[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [rooms, setRooms] = useState<Room[]>([]);
+
   // Check user permissions on component mount
   useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    if (!userStr) {
+    checkAuth();
+    fetchData();
+  }, []);
+  
+  const checkAuth = async () => {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession();
+      
+      if (error || !session) {
+        toast({
+          title: "Access Denied",
+          description: "Please login to access the admin dashboard",
+          variant: "destructive",
+        });
+        navigate('/login');
+        return;
+      }
+
+      // Check if user is admin
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('role')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profileError || !profile || profile.role !== 'admin') {
+        toast({
+          title: "Access Denied",
+          description: "You don't have permission to access the admin dashboard",
+          variant: "destructive",
+        });
+        navigate('/dashboard');
+      }
+    } catch (error) {
+      console.error("Auth check failed:", error);
       toast({
-        title: "Access Denied",
-        description: "Please login to access the admin dashboard",
+        title: "Authentication Error",
+        description: "Please try logging in again",
         variant: "destructive",
       });
       navigate('/login');
-      return;
     }
+  };
 
-    const user = JSON.parse(userStr);
-    if (user.role !== 'admin' || !user.permissions.canManageUsers) {
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([fetchUsers(), fetchBookings(), fetchRooms()]);
+    } catch (error) {
+      console.error("Error fetching data:", error);
       toast({
-        title: "Access Denied",
-        description: "You don't have permission to access the admin dashboard",
+        title: "Error",
+        description: "Failed to load dashboard data",
         variant: "destructive",
       });
-      navigate('/dashboard');
+    } finally {
+      setIsLoading(false);
     }
-  }, [navigate, toast]);
+  };
 
-  // Sample data - In a real app, this would come from an API
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: '1',
-      name: 'John Doe',
-      email: 'john@example.com',
-      role: 'admin',
-      department: 'IT',
-      status: 'active',
-      permissions: {
-        canBook: true,
-        canManageUsers: true,
-        canManageResources: true,
-        canManageBookings: true,
-      },
-      lastLogin: '2024-03-20 10:00',
-    },
-    {
-      id: '2',
-      name: 'Jane Smith',
-      email: 'jane@example.com',
-      role: 'lecturer',
-      department: 'Computer Science',
-      status: 'active',
-      permissions: {
-        canBook: true,
-        canManageUsers: false,
-        canManageResources: false,
-        canManageBookings: true,
-      },
-      lastLogin: '2024-03-19 15:30',
-    },
-  ]);
+  const fetchUsers = async () => {
+    try {
+      // First get user profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('user_profiles')
+        .select('*');
 
-  const [bookings, setBookings] = useState<Booking[]>([
-    {
-      id: '1',
-      resource: 'Lab A - Workstation 12',
-      user: 'Eugene Maposa',
-      date: 'March 25, 2024',
-      time: '2:00 PM - 4:00 PM',
-      status: 'pending',
-      purpose: 'Project Development'
-    },
-    {
-      id: '2',
-      resource: 'Study Room B',
-      user: 'Tatenda Ndoro',
-      date: 'March 26, 2024',
-      time: '10:00 AM - 12:00 PM',
-      status: 'pending',
-      purpose: 'Research Meeting'
+      if (profilesError) throw profilesError;
+
+      // Map profiles data to our User interface
+      const mappedUsers = profiles.map((profile) => {
+        return {
+          id: profile.id,
+          email: profile.email,
+          full_name: profile.full_name,
+          student_number: profile.student_number,
+          phone: profile.phone,
+          role: profile.role as 'admin' | 'user',
+          created_at: profile.created_at,
+        };
+      });
+
+      setUsers(mappedUsers);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      throw error;
     }
-  ]);
+  };
 
-  const [resources, setResources] = useState<Resource[]>([
-    {
-      id: '1',
-      name: 'Lab A - Workstation 12',
-      type: 'Workstation',
-      status: 'available',
-      lastMaintenance: 'March 20, 2024'
-    },
-    {
-      id: '2',
-      name: 'Study Room B',
-      type: 'Room',
-      status: 'in-use',
-      lastMaintenance: 'March 15, 2024',
-      capacity: 4
+  const fetchBookings = async () => {
+    try {
+      // Join bookings with rooms and user_profiles to get names
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          user_id,
+          date,
+          time_slot,
+          purpose,
+          status,
+          created_at,
+          rooms:room_id(id, name),
+          user_profiles:user_id(full_name, email)
+        `);
+
+      if (error) throw error;
+
+      // Map the joined data to our Booking interface
+      const mappedBookings = data.map((booking: any) => {
+        return {
+          id: booking.id,
+          room_name: booking.rooms ? booking.rooms.name : 'Unknown Room',
+          user_name: booking.user_profiles ? booking.user_profiles.full_name || booking.user_profiles.email : 'Unknown User',
+          user_id: booking.user_id,
+          date: booking.date,
+          time_slot: booking.time_slot,
+          purpose: booking.purpose,
+          status: booking.status,
+          created_at: booking.created_at,
+        };
+      });
+
+      setBookings(mappedBookings);
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+      throw error;
     }
-  ]);
+  };
 
-  const [newUser, setNewUser] = useState<UserFormData>({
-    name: '',
-    email: '',
-    role: 'student' as const,
-    department: '',
-    status: 'active' as const,
-    permissions: {
-      canBook: true,
-      canManageUsers: false,
-      canManageResources: false,
-      canManageBookings: false,
-    },
-    password: '',
-    confirmPassword: '',
-  });
+  const fetchRooms = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('rooms')
+        .select('*');
 
-  const [newResource, setNewResource] = useState({
-    name: '',
-    type: '',
-    capacity: ''
-  });
+      if (error) throw error;
+      setRooms(data);
+    } catch (error) {
+      console.error("Error fetching rooms:", error);
+      throw error;
+    }
+  };
 
   // Filter functions
   const filteredUsers = users.filter(user => 
-    user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    (user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    user.student_number?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    false)
   );
 
   const filteredBookings = bookings.filter(booking =>
-    (booking.resource.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    booking.user.toLowerCase().includes(searchQuery.toLowerCase())) &&
+    (booking.room_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    booking.user_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    booking.purpose?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    false) &&
     (filterStatus === 'all' || booking.status === filterStatus)
   );
 
-  const filteredResources = resources.filter(resource =>
-    resource.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
-    (filterStatus === 'all' || resource.status === filterStatus)
+  const filteredRooms = rooms.filter(room =>
+    room.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    (filterStatus === 'all' || room.status === filterStatus)
   );
 
   // Password validation function
@@ -332,12 +375,8 @@ const Admin = () => {
   };
 
   // Validation function for user form
-  const validateUserForm = (user: User): boolean => {
+  const validateUserForm = (user: UserFormData): boolean => {
     const errors: Record<string, string> = {};
-    
-    if (!user.name.trim()) {
-      errors.name = 'Name is required';
-    }
     
     if (!user.email.trim()) {
       errors.email = 'Email is required';
@@ -345,20 +384,35 @@ const Admin = () => {
       errors.email = 'Invalid email format';
     }
     
-    if (!user.department.trim()) {
-      errors.department = 'Department is required';
-    }
-
-    if (user.role === 'student' && !user.studentId?.trim()) {
-      errors.studentId = 'Student ID is required for students';
-    }
-
-    if (user.role === 'lecturer' && !user.staffId?.trim()) {
-      errors.staffId = 'Staff ID is required for lecturers';
-    }
-
-    if (user.phoneNumber && !/^\+?[\d\s-]{10,}$/.test(user.phoneNumber)) {
+    if (user.phone && !/^\+?[\d\s-]{10,}$/.test(user.phone)) {
       errors.phoneNumber = 'Invalid phone number format';
+    }
+
+    if (user.password && user.password !== user.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match';
+    }
+
+    if (user.password) {
+      const passwordValidation = validatePassword(user.password);
+      if (!passwordValidation.isValid) {
+        errors.password = passwordValidation.message;
+      }
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Validation function for room form
+  const validateRoomForm = (room: Room): boolean => {
+    const errors: Record<string, string> = {};
+    
+    if (!room.name.trim()) {
+      errors.name = 'Name is required';
+    }
+    
+    if (!room.type.trim()) {
+      errors.type = 'Type is required';
     }
 
     setFormErrors(errors);
@@ -367,63 +421,99 @@ const Admin = () => {
 
   const resetNewUserForm = () => {
     setNewUser({
-      name: '',
       email: '',
-      role: 'student' as const,
-      department: '',
-      status: 'active' as const,
-      permissions: {
-        canBook: true,
-        canManageUsers: false,
-        canManageResources: false,
-        canManageBookings: false,
-      },
+      role: 'user' as const,
+      full_name: '',
+      student_number: '',
+      phone: '',
       password: '',
       confirmPassword: '',
     });
   };
 
-  const handleAddUser = () => {
-    if (validateUserForm(newUser as User)) {
-      if (newUser.password !== newUser.confirmPassword) {
+  const [newUser, setNewUser] = useState<UserFormData>({
+    email: '',
+    role: 'user' as const,
+    full_name: '',
+    student_number: '',
+    phone: '',
+    password: '',
+    confirmPassword: '',
+  });
+
+  const [newRoom, setNewRoom] = useState<Omit<Room, 'id'>>({
+    name: '',
+    type: '',
+    status: 'available',
+    capacity: undefined,
+    description: '',
+  });
+
+  const handleAddUser = async () => {
+    if (!validateUserForm(newUser)) return;
+    
+    try {
+      // First create auth user if password is provided
+      if (newUser.password) {
+        const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+          email: newUser.email,
+          password: newUser.password,
+          email_confirm: true
+        });
+        
+        if (authError) throw authError;
+        
+        // Then create user profile
+        const { error: profileError } = await supabase
+          .from('user_profiles')
+          .insert({
+            id: authData.user.id,
+            email: newUser.email,
+            full_name: newUser.full_name,
+            student_number: newUser.student_number,
+            phone: newUser.phone,
+            role: newUser.role
+          });
+          
+        if (profileError) throw profileError;
+      } else {
+        // If no password, assume user already exists in auth and just add profile
+        // This would need user ID, which we don't have here
         toast({
-          title: "Passwords don't match",
-          description: "Please make sure your passwords match.",
+          title: "Error",
+          description: "Password is required when adding a new user",
           variant: "destructive",
         });
         return;
       }
-
-      if (!validatePassword(newUser.password)) {
-        toast({
-          title: "Invalid password",
-          description: "Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      const newUserWithId: User = {
-        ...newUser,
-        id: Math.random().toString(36).substr(2, 9),
-        status: 'active' as const,
-        lastLogin: new Date().toISOString(),
-      };
-
-      setUsers([...users, newUserWithId]);
+      
       toast({
         title: "User added",
-        description: `Successfully added ${newUser.name} as a ${newUser.role}.`,
+        description: `Successfully added ${newUser.full_name || newUser.email} as a ${newUser.role}.`,
       });
+      
       setIsAddUserOpen(false);
       resetNewUserForm();
+      fetchUsers(); // Refresh users list
+    } catch (error) {
+      console.error("Error adding user:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add user. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleEditUser = (user: User) => {
     setSelectedUser(user);
     setEditedUser({
-      ...user,
+      email: user.email,
+      full_name: user.full_name,
+      student_number: user.student_number,
+      phone: user.phone,
+      role: user.role,
+      password: '',
       confirmPassword: '',
     });
     setFormErrors({});
@@ -431,108 +521,314 @@ const Admin = () => {
   };
 
   const handleUpdateUser = () => {
-    if (editedUser && validateUserForm(editedUser as User)) {
+    if (editedUser && validateUserForm(editedUser)) {
       setIsConfirmDialogOpen(true);
     }
   };
 
-  const confirmUpdateUser = () => {
+  const confirmUpdateUser = async () => {
     if (editedUser && selectedUser) {
-      const updatedUser: User = {
-        ...editedUser,
-        id: selectedUser.id,
-        lastLogin: selectedUser.lastLogin,
-      };
-      setUsers(users.map(user => 
-        user.id === updatedUser.id ? updatedUser : user
-      ));
-      toast({
-        title: "User updated",
-        description: "The user's information has been updated successfully.",
-      });
-      setIsEditUserOpen(false);
-      setIsConfirmDialogOpen(false);
-      setSelectedUser(null);
-      setEditedUser(null);
-      setFormErrors({});
+      try {
+        // Update user profile in database
+        const { error } = await supabase
+          .from('user_profiles')
+          .update({
+            email: editedUser.email,
+            full_name: editedUser.full_name,
+            student_number: editedUser.student_number,
+            phone: editedUser.phone,
+            role: editedUser.role
+          })
+          .eq('id', selectedUser.id);
+        
+        if (error) throw error;
+        
+        // Update password if provided
+        if (editedUser.password) {
+          const { error: passwordError } = await supabase.auth.admin.updateUserById(
+            selectedUser.id,
+            { password: editedUser.password }
+          );
+          
+          if (passwordError) throw passwordError;
+        }
+        
+        toast({
+          title: "User updated",
+          description: "The user's information has been updated successfully.",
+        });
+        
+        setIsEditUserOpen(false);
+        setIsConfirmDialogOpen(false);
+        setSelectedUser(null);
+        setEditedUser(null);
+        setFormErrors({});
+        fetchUsers(); // Refresh users list
+      } catch (error) {
+        console.error("Error updating user:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update user. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
-  const handleDeleteUser = (userId: string) => {
-    setUsers(users.filter(user => user.id !== userId));
-    toast({
-      title: "User Deleted",
-      description: "The user has been removed from the system.",
-    });
+  const handleDeleteConfirm = (id: string, type: 'user' | 'room' | 'booking') => {
+    setItemToDelete({ id, type });
+    setIsDeleteConfirmOpen(true);
   };
 
-  const handleAddResource = () => {
-    const newResourceWithId: Resource = {
-      ...newResource,
-      id: Date.now().toString(),
-      status: 'available' as const,
-      lastMaintenance: new Date().toLocaleString(),
-      capacity: newResource.capacity ? parseInt(newResource.capacity) : undefined
-    };
-    setResources([...resources, newResourceWithId]);
-    toast({
-      title: "Resource Added",
-      description: `Successfully added ${newResource.name} to the system.`,
-    });
-    setIsAddResourceOpen(false);
-    setNewResource({ name: '', type: '', capacity: '' });
+  const confirmDelete = async () => {
+    if (!itemToDelete) return;
+    
+    try {
+      switch (itemToDelete.type) {
+        case 'user':
+          // Delete user from auth and profile will cascade
+          await supabase.auth.admin.deleteUser(itemToDelete.id);
+          fetchUsers();
+          toast({
+            title: "User Deleted",
+            description: "The user has been removed from the system.",
+          });
+          break;
+          
+        case 'room':
+          await supabase
+            .from('rooms')
+            .delete()
+            .eq('id', itemToDelete.id);
+          fetchRooms();
+          toast({
+            title: "Room Deleted",
+            description: "The room has been removed from the system.",
+          });
+          break;
+          
+        case 'booking':
+          await supabase
+            .from('bookings')
+            .delete()
+            .eq('id', itemToDelete.id);
+          fetchBookings();
+          toast({
+            title: "Booking Deleted",
+            description: "The booking has been removed from the system.",
+          });
+          break;
+      }
+    } catch (error) {
+      console.error(`Error deleting ${itemToDelete.type}:`, error);
+      toast({
+        title: "Error",
+        description: `Failed to delete ${itemToDelete.type}. Please try again.`,
+        variant: "destructive",
+      });
+    } finally {
+      setIsDeleteConfirmOpen(false);
+      setItemToDelete(null);
+    }
+  };
+
+  const handleAddRoom = async () => {
+    if (!validateRoomForm(newRoom as Room)) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('rooms')
+        .insert(newRoom)
+        .select();
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Room Added",
+        description: `Successfully added ${newRoom.name} to the system.`,
+      });
+      
+      setIsAddResourceOpen(false);
+      setNewRoom({
+        name: '',
+        type: '',
+        status: 'available',
+        capacity: undefined,
+        description: '',
+      });
+      fetchRooms(); // Refresh rooms list
+    } catch (error) {
+      console.error("Error adding room:", error);
+      toast({
+        title: "Error",
+        description: "Failed to add room. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditRoom = (room: Room) => {
+    setSelectedRoom(room);
+    setEditedRoom({ ...room });
+    setFormErrors({});
+    setIsEditResourceOpen(true);
+  };
+
+  const handleUpdateRoom = async () => {
+    if (!editedRoom || !validateRoomForm(editedRoom)) return;
+    
+    try {
+      const { error } = await supabase
+        .from('rooms')
+        .update({
+          name: editedRoom.name,
+          type: editedRoom.type,
+          status: editedRoom.status,
+          capacity: editedRoom.capacity,
+          description: editedRoom.description
+        })
+        .eq('id', editedRoom.id);
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Room Updated",
+        description: "The room information has been updated successfully.",
+      });
+      
+      setIsEditResourceOpen(false);
+      setSelectedRoom(null);
+      setEditedRoom(null);
+      setFormErrors({});
+      fetchRooms(); // Refresh rooms list
+    } catch (error) {
+      console.error("Error updating room:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update room. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   // Update booking handlers
   const handleBookingAction = (booking: Booking, action: 'approve' | 'reject' | 'cancel') => {
     setSelectedBooking(booking);
     setBookingAction(action);
+    setRejectionReason('');
     setIsBookingActionDialogOpen(true);
   };
 
-  const confirmBookingAction = () => {
+  const confirmBookingAction = async () => {
     if (!selectedBooking || !bookingAction) return;
 
-    let updatedStatus: Booking['status'];
-    let toastMessage = '';
+    try {
+      let updatedStatus: Booking['status'];
+      let toastMessage = '';
 
-    switch (bookingAction) {
-      case 'approve':
-        updatedStatus = 'approved';
-        toastMessage = 'Booking has been approved successfully.';
-        break;
-      case 'reject':
-        updatedStatus = 'rejected';
-        toastMessage = `Booking has been rejected${rejectionReason ? `: ${rejectionReason}` : '.'}`;
-        break;
-      case 'cancel':
-        updatedStatus = 'cancelled' as Booking['status'];
-        toastMessage = 'Booking has been cancelled.';
-        break;
-      default:
-        return;
+      switch (bookingAction) {
+        case 'approve':
+          updatedStatus = 'approved';
+          toastMessage = 'Booking has been approved successfully.';
+          break;
+        case 'reject':
+          updatedStatus = 'rejected';
+          toastMessage = `Booking has been rejected${rejectionReason ? `: ${rejectionReason}` : '.'}`;
+          break;
+        case 'cancel':
+          updatedStatus = 'cancelled';
+          toastMessage = 'Booking has been cancelled.';
+          break;
+        default:
+          return;
+      }
+
+      // Update booking status
+      const { error } = await supabase
+        .from('bookings')
+        .update({ 
+          status: updatedStatus,
+          // In a real app, store rejection reason in a separate table or as JSON metadata
+        })
+        .eq('id', selectedBooking.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Booking Updated",
+        description: toastMessage,
+      });
+
+      fetchBookings(); // Refresh bookings list
+    } catch (error) {
+      console.error("Error updating booking status:", error);
+      toast({
+        title: "Error",
+        description: "Failed to update booking status. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      // Reset state
+      setIsBookingActionDialogOpen(false);
+      setSelectedBooking(null);
+      setBookingAction(null);
+      setRejectionReason('');
     }
-
-    setBookings(bookings.map(booking =>
-      booking.id === selectedBooking.id
-        ? { ...booking, status: updatedStatus }
-        : booking
-    ));
-
-    toast({
-      title: "Booking Updated",
-      description: toastMessage,
-    });
-
-    // Reset state
-    setIsBookingActionDialogOpen(false);
-    setSelectedBooking(null);
-    setBookingAction(null);
-    setRejectionReason('');
   };
 
   const handleExportData = () => {
-    // In a real app, this would generate and download a CSV/Excel file
+    let dataToExport = [];
+    let filename = '';
+    
+    switch (activeTab) {
+      case 'users':
+        dataToExport = users.map(u => ({
+          'Email': u.email,
+          'Name': u.full_name,
+          'Student ID': u.student_number,
+          'Phone': u.phone,
+          'Role': u.role,
+          'Created': u.created_at
+        }));
+        filename = 'users-export.json';
+        break;
+      case 'bookings':
+        dataToExport = bookings.map(b => ({
+          'Room': b.room_name,
+          'User': b.user_name,
+          'Date': b.date,
+          'Time Slot': b.time_slot,
+          'Purpose': b.purpose,
+          'Status': b.status,
+          'Created': b.created_at
+        }));
+        filename = 'bookings-export.json';
+        break;
+      case 'resources':
+        dataToExport = rooms.map(r => ({
+          'Name': r.name,
+          'Type': r.type,
+          'Status': r.status,
+          'Capacity': r.capacity,
+          'Description': r.description
+        }));
+        filename = 'resources-export.json';
+        break;
+    }
+
+    // Create and download file
+    const jsonString = JSON.stringify(dataToExport, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const href = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = href;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(href);
+
     toast({
       title: "Data Exported",
       description: "The data has been exported successfully.",
@@ -540,7 +836,7 @@ const Admin = () => {
   };
 
   const handleRefreshData = () => {
-    // In a real app, this would fetch fresh data from the API
+    fetchData();
     toast({
       title: "Data Refreshed",
       description: "The data has been refreshed successfully.",
@@ -574,6 +870,14 @@ const Admin = () => {
     setIsMaintenanceOpen(false);
   };
 
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'PPP');
+    } catch (e) {
+      return dateString;
+    }
+  };
+
   return (
     <Layout>
       <PageHeader 
@@ -591,7 +895,7 @@ const Admin = () => {
             <CardContent>
               <div className="text-2xl font-bold">{users.length}</div>
               <p className="text-xs text-muted-foreground">
-                {users.filter(u => u.status === 'active').length} active users
+                {users.filter(u => u.role === 'user').length} regular users, {users.filter(u => u.role === 'admin').length} admins
               </p>
             </CardContent>
           </Card>
@@ -618,10 +922,10 @@ const Admin = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {Math.round((resources.filter(r => r.status === 'in-use').length / resources.length) * 100)}%
+                {rooms.length > 0 ? Math.round((rooms.filter(r => r.status === 'in-use').length / rooms.length) * 100) : 0}%
               </div>
               <p className="text-xs text-muted-foreground">
-                {resources.filter(r => r.status === 'available').length} resources available
+                {rooms.filter(r => r.status === 'available').length} resources available
               </p>
             </CardContent>
           </Card>
@@ -676,775 +980,822 @@ const Admin = () => {
             </div>
           </div>
 
-          <TabsContent value="bookings" className="space-y-4">
+          {isLoading ? (
             <Card>
-              <CardContent className="p-6">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Resource</TableHead>
-                      <TableHead>User</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Time</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Purpose</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredBookings.map((booking) => (
-                      <TableRow key={booking.id}>
-                        <TableCell>{booking.resource}</TableCell>
-                        <TableCell>{booking.user}</TableCell>
-                        <TableCell>{booking.date}</TableCell>
-                        <TableCell>{booking.time}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            booking.status === 'approved' ? 'bg-green-100 text-green-800' :
-                            booking.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {booking.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>{booking.purpose}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            {booking.status === 'pending' && (
-                              <>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  onClick={() => handleBookingAction(booking, 'approve')}
-                                  className="text-green-600 hover:text-green-700"
-                                >
-                                  <CheckCircle2 className="h-4 w-4 mr-2" /> Approve
-                                </Button>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => handleBookingAction(booking, 'reject')}
-                                  className="text-red-500 hover:text-red-600"
-                                >
-                                  <AlertCircle className="h-4 w-4 mr-2" /> Reject
-                                </Button>
-                              </>
-                            )}
-                            {booking.status === 'approved' && (
-                              <Button 
-                                variant="outline" 
-                                size="sm"
-                                onClick={() => handleBookingAction(booking, 'cancel')}
-                                className="text-yellow-600 hover:text-yellow-700"
-                              >
-                                <AlertCircle className="h-4 w-4 mr-2" /> Cancel
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <CardContent className="p-6 flex justify-center items-center h-40">
+                <div className="flex flex-col items-center">
+                  <RefreshCw className="h-10 w-10 animate-spin text-muted-foreground mb-4" />
+                  <p>Loading data...</p>
+                </div>
               </CardContent>
             </Card>
-          </TabsContent>
-
-          <TabsContent value="users" className="space-y-4">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold">User Management</h3>
-                  <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <UserPlus className="h-4 w-4 mr-2" /> Add User
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
-                      <DialogHeader>
-                        <DialogTitle>Add New User</DialogTitle>
-                        <DialogDescription>
-                          Add a new user to the system. Fill in all required fields below.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="grid gap-2">
-                            <Label htmlFor="name">Full Name *</Label>
-                            <Input
-                              id="name"
-                              value={newUser.name}
-                              onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
-                              placeholder="Enter full name"
-                            />
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor="email">Email *</Label>
-                            <Input
-                              id="email"
-                              type="email"
-                              value={newUser.email}
-                              onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                              placeholder="Enter email address"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="grid gap-2">
-                            <Label htmlFor="role">Role *</Label>
-                            <Select
-                              value={newUser.role}
-                              onValueChange={(value) => setNewUser({ ...newUser, role: value as 'admin' | 'lecturer' | 'student' })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select role" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="student">Student</SelectItem>
-                                <SelectItem value="lecturer">Lecturer</SelectItem>
-                                <SelectItem value="admin">Administrator</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor="department">Department *</Label>
-                            <Input
-                              id="department"
-                              value={newUser.department}
-                              onChange={(e) => setNewUser({ ...newUser, department: e.target.value })}
-                              placeholder="Enter department"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="grid gap-2">
-                            <Label htmlFor="password">Password *</Label>
-                            <div className="relative">
-                              <Input
-                                id="password"
-                                type={showPassword ? "text" : "password"}
-                                value={newUser.password}
-                                onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
-                                placeholder="Enter password"
-                              />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                                onClick={() => setShowPassword(!showPassword)}
-                              >
-                                {showPassword ? (
-                                  <EyeOff className="h-4 w-4 text-gray-500" />
-                                ) : (
-                                  <Eye className="h-4 w-4 text-gray-500" />
-                                )}
-                              </Button>
-                            </div>
-                            <p className="text-sm text-muted-foreground">
-                              Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character
-                            </p>
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor="confirm-password">Confirm Password *</Label>
-                            <div className="relative">
-                              <Input
-                                id="confirm-password"
-                                type={showConfirmPassword ? "text" : "password"}
-                                value={newUser.confirmPassword}
-                                onChange={(e) => setNewUser({ ...newUser, confirmPassword: e.target.value })}
-                                placeholder="Confirm password"
-                              />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                              >
-                                {showConfirmPassword ? (
-                                  <EyeOff className="h-4 w-4 text-gray-500" />
-                                ) : (
-                                  <Eye className="h-4 w-4 text-gray-500" />
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="grid gap-2">
-                            <Label htmlFor="phone">Phone Number</Label>
-                            <Input
-                              id="phone"
-                              value={newUser.phoneNumber}
-                              onChange={(e) => setNewUser({ ...newUser, phoneNumber: e.target.value })}
-                              placeholder="Enter phone number"
-                            />
-                          </div>
-                          {newUser.role === 'student' && (
-                            <div className="grid gap-2">
-                              <Label htmlFor="student-id">Student ID *</Label>
-                              <Input
-                                id="student-id"
-                                value={newUser.studentId}
-                                onChange={(e) => setNewUser({ ...newUser, studentId: e.target.value })}
-                                placeholder="Enter student ID"
-                              />
-                            </div>
-                          )}
-                          {newUser.role === 'lecturer' && (
-                            <div className="grid gap-2">
-                              <Label htmlFor="staff-id">Staff ID *</Label>
-                              <Input
-                                id="staff-id"
-                                value={newUser.staffId}
-                                onChange={(e) => setNewUser({ ...newUser, staffId: e.target.value })}
-                                placeholder="Enter staff ID"
-                              />
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="grid gap-2">
-                          <Label htmlFor="notes">Notes</Label>
-                          <Textarea
-                            id="notes"
-                            value={newUser.notes}
-                            onChange={(e) => setNewUser({ ...newUser, notes: e.target.value })}
-                            placeholder="Add any additional notes about the user"
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsAddUserOpen(false)}>
-                          Cancel
-                        </Button>
-                        <Button onClick={handleAddUser}>Add User</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
-
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Department</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Last Login</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredUsers.map((user) => (
-                      <TableRow key={user.id}>
-                        <TableCell>{user.name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
-                        <TableCell>{user.role}</TableCell>
-                        <TableCell>{user.department}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            user.status === 'active' ? 'bg-green-100 text-green-800' :
-                            user.status === 'suspended' ? 'bg-red-100 text-red-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {user.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>{user.lastLogin}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleEditUser(user)}
-                            >
-                              <Edit className="h-4 w-4 mr-2" /> Edit
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              className="text-red-500"
-                              onClick={() => handleDeleteUser(user.id)}
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" /> Delete
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-
-                {/* Edit User Dialog */}
-                <Dialog open={isEditUserOpen} onOpenChange={(open) => {
-                  if (!open) {
-                    setFormErrors({});
-                  }
-                  setIsEditUserOpen(open);
-                }}>
-                  <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                      <DialogTitle>Edit User</DialogTitle>
-                      <DialogDescription>
-                        Update user information. Make changes to the fields below.
-                      </DialogDescription>
-                    </DialogHeader>
-                    {editedUser && (
-                      <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="grid gap-2">
-                            <Label htmlFor="edit-name">Full Name *</Label>
-                            <Input
-                              id="edit-name"
-                              value={editedUser.name}
-                              onChange={(e) => setEditedUser({ ...editedUser, name: e.target.value })}
-                              className={formErrors.name ? "border-red-500" : ""}
-                            />
-                            {formErrors.name && (
-                              <p className="text-sm text-red-500">{formErrors.name}</p>
-                            )}
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor="edit-email">Email *</Label>
-                            <Input
-                              id="edit-email"
-                              type="email"
-                              value={editedUser.email}
-                              onChange={(e) => setEditedUser({ ...editedUser, email: e.target.value })}
-                              className={formErrors.email ? "border-red-500" : ""}
-                            />
-                            {formErrors.email && (
-                              <p className="text-sm text-red-500">{formErrors.email}</p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="grid gap-2">
-                            <Label htmlFor="edit-role">Role *</Label>
-                            <Select
-                              value={editedUser.role}
-                              onValueChange={(value) => {
-                                const newUser = { 
-                                  ...editedUser, 
-                                  role: value as 'admin' | 'lecturer' | 'student'
-                                };
-                                // Reset role-specific fields when role changes
-                                if (value === 'student') {
-                                  newUser.staffId = undefined;
-                                } else if (value === 'lecturer') {
-                                  newUser.studentId = undefined;
-                                }
-                                setEditedUser(newUser);
-                              }}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select role" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="student">Student</SelectItem>
-                                <SelectItem value="lecturer">Lecturer</SelectItem>
-                                <SelectItem value="admin">Administrator</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor="edit-department">Department *</Label>
-                            <Input
-                              id="edit-department"
-                              value={editedUser.department}
-                              onChange={(e) => setEditedUser({ ...editedUser, department: e.target.value })}
-                              className={formErrors.department ? "border-red-500" : ""}
-                            />
-                            {formErrors.department && (
-                              <p className="text-sm text-red-500">{formErrors.department}</p>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="grid gap-2">
-                            <Label htmlFor="edit-phone">Phone Number</Label>
-                            <Input
-                              id="edit-phone"
-                              value={editedUser.phoneNumber || ''}
-                              onChange={(e) => setEditedUser({ ...editedUser, phoneNumber: e.target.value })}
-                              className={formErrors.phoneNumber ? "border-red-500" : ""}
-                            />
-                            {formErrors.phoneNumber && (
-                              <p className="text-sm text-red-500">{formErrors.phoneNumber}</p>
-                            )}
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor="edit-status">Status *</Label>
-                            <Select
-                              value={editedUser.status}
-                              onValueChange={(value) => setEditedUser({ ...editedUser, status: value as 'active' | 'suspended' | 'pending' })}
-                            >
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="active">Active</SelectItem>
-                                <SelectItem value="suspended">Suspended</SelectItem>
-                                <SelectItem value="pending">Pending</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
-
-                        {editedUser.role === 'student' && (
-                          <div className="grid gap-2">
-                            <Label htmlFor="edit-student-id">Student ID *</Label>
-                            <Input
-                              id="edit-student-id"
-                              value={editedUser.studentId || ''}
-                              onChange={(e) => setEditedUser({ ...editedUser, studentId: e.target.value })}
-                              className={formErrors.studentId ? "border-red-500" : ""}
-                            />
-                            {formErrors.studentId && (
-                              <p className="text-sm text-red-500">{formErrors.studentId}</p>
-                            )}
-                          </div>
+          ) : (
+            <>
+              <TabsContent value="bookings" className="space-y-4">
+                <Card>
+                  <CardContent className="p-6">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Resource</TableHead>
+                          <TableHead>User</TableHead>
+                          <TableHead>Date</TableHead>
+                          <TableHead>Time</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Purpose</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredBookings.length > 0 ? (
+                          filteredBookings.map((booking) => (
+                            <TableRow key={booking.id}>
+                              <TableCell>{booking.room_name}</TableCell>
+                              <TableCell>{booking.user_name}</TableCell>
+                              <TableCell>{formatDate(booking.date)}</TableCell>
+                              <TableCell>{booking.time_slot}</TableCell>
+                              <TableCell>
+                                <span className={`px-2 py-1 rounded-full text-xs ${
+                                  booking.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                  booking.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                                  booking.status === 'cancelled' ? 'bg-gray-100 text-gray-800' :
+                                  'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {booking.status}
+                                </span>
+                              </TableCell>
+                              <TableCell>{booking.purpose || "Not specified"}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center space-x-2">
+                                  {booking.status === 'pending' && (
+                                    <>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        onClick={() => handleBookingAction(booking, 'approve')}
+                                        className="text-green-600 hover:text-green-700"
+                                      >
+                                        <CheckCircle2 className="h-4 w-4 mr-2" /> Approve
+                                      </Button>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        onClick={() => handleBookingAction(booking, 'reject')}
+                                        className="text-red-500 hover:text-red-600"
+                                      >
+                                        <AlertCircle className="h-4 w-4 mr-2" /> Reject
+                                      </Button>
+                                    </>
+                                  )}
+                                  {booking.status === 'approved' && (
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm"
+                                      onClick={() => handleBookingAction(booking, 'cancel')}
+                                      className="text-yellow-600 hover:text-yellow-700"
+                                    >
+                                      <AlertCircle className="h-4 w-4 mr-2" /> Cancel
+                                    </Button>
+                                  )}
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => handleDeleteConfirm(booking.id, 'booking')}
+                                    className="text-red-500 hover:text-red-600"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                              No bookings found
+                            </TableCell>
+                          </TableRow>
                         )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-                        {editedUser.role === 'lecturer' && (
-                          <div className="grid gap-2">
-                            <Label htmlFor="edit-staff-id">Staff ID *</Label>
-                            <Input
-                              id="edit-staff-id"
-                              value={editedUser.staffId || ''}
-                              onChange={(e) => setEditedUser({ ...editedUser, staffId: e.target.value })}
-                              className={formErrors.staffId ? "border-red-500" : ""}
-                            />
-                            {formErrors.staffId && (
-                              <p className="text-sm text-red-500">{formErrors.staffId}</p>
-                            )}
+              <TabsContent value="users" className="space-y-4">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold">User Management</h3>
+                      <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+                        <DialogTrigger asChild>
+                          <Button>
+                            <UserPlus className="h-4 w-4 mr-2" /> Add User
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent className="max-w-2xl">
+                          <DialogHeader>
+                            <DialogTitle>Add New User</DialogTitle>
+                            <DialogDescription>
+                              Add a new user to the system. Fill in all required fields below.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="grid gap-2">
+                                <Label htmlFor="name">Full Name</Label>
+                                <Input
+                                  id="name"
+                                  value={newUser.full_name || ''}
+                                  onChange={(e) => setNewUser({ ...newUser, full_name: e.target.value })}
+                                  placeholder="Enter full name"
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <Label htmlFor="email">Email *</Label>
+                                <Input
+                                  id="email"
+                                  type="email"
+                                  value={newUser.email}
+                                  onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                                  placeholder="Enter email address"
+                                  className={formErrors.email ? "border-red-500" : ""}
+                                />
+                                {formErrors.email && (
+                                  <p className="text-sm text-red-500">{formErrors.email}</p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="grid gap-2">
+                                <Label htmlFor="role">Role *</Label>
+                                <Select
+                                  value={newUser.role}
+                                  onValueChange={(value) => setNewUser({ ...newUser, role: value as 'admin' | 'user' })}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select role" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="user">User</SelectItem>
+                                    <SelectItem value="admin">Administrator</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="grid gap-2">
+                                <Label htmlFor="student-number">Student Number</Label>
+                                <Input
+                                  id="student-number"
+                                  value={newUser.student_number || ''}
+                                  onChange={(e) => setNewUser({ ...newUser, student_number: e.target.value })}
+                                  placeholder="Enter student number"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="grid gap-2">
+                                <Label htmlFor="password">Password *</Label>
+                                <div className="relative">
+                                  <Input
+                                    id="password"
+                                    type={showPassword ? "text" : "password"}
+                                    value={newUser.password}
+                                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                                    placeholder="Enter password"
+                                    className={formErrors.password ? "border-red-500" : ""}
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                  >
+                                    {showPassword ? (
+                                      <EyeOff className="h-4 w-4 text-gray-500" />
+                                    ) : (
+                                      <Eye className="h-4 w-4 text-gray-500" />
+                                    )}
+                                  </Button>
+                                </div>
+                                {formErrors.password && (
+                                  <p className="text-sm text-red-500">{formErrors.password}</p>
+                                )}
+                                <p className="text-sm text-muted-foreground">
+                                  Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character
+                                </p>
+                              </div>
+                              <div className="grid gap-2">
+                                <Label htmlFor="confirm-password">Confirm Password *</Label>
+                                <div className="relative">
+                                  <Input
+                                    id="confirm-password"
+                                    type={showConfirmPassword ? "text" : "password"}
+                                    value={newUser.confirmPassword}
+                                    onChange={(e) => setNewUser({ ...newUser, confirmPassword: e.target.value })}
+                                    placeholder="Confirm password"
+                                    className={formErrors.confirmPassword ? "border-red-500" : ""}
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                  >
+                                    {showConfirmPassword ? (
+                                      <EyeOff className="h-4 w-4 text-gray-500" />
+                                    ) : (
+                                      <Eye className="h-4 w-4 text-gray-500" />
+                                    )}
+                                  </Button>
+                                </div>
+                                {formErrors.confirmPassword && (
+                                  <p className="text-sm text-red-500">{formErrors.confirmPassword}</p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="grid gap-2">
+                              <Label htmlFor="phone">Phone Number</Label>
+                              <Input
+                                id="phone"
+                                value={newUser.phone || ''}
+                                onChange={(e) => setNewUser({ ...newUser, phone: e.target.value })}
+                                placeholder="Enter phone number"
+                                className={formErrors.phoneNumber ? "border-red-500" : ""}
+                              />
+                              {formErrors.phoneNumber && (
+                                <p className="text-sm text-red-500">{formErrors.phoneNumber}</p>
+                              )}
+                            </div>
                           </div>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => {
+                              setIsAddUserOpen(false);
+                              resetNewUserForm();
+                              setFormErrors({});
+                            }}>
+                              Cancel
+                            </Button>
+                            <Button onClick={handleAddUser}>Add User</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Email</TableHead>
+                          <TableHead>Student Number</TableHead>
+                          <TableHead>Role</TableHead>
+                          <TableHead>Created At</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredUsers.length > 0 ? (
+                          filteredUsers.map((user) => (
+                            <TableRow key={user.id}>
+                              <TableCell>{user.full_name || 'Not provided'}</TableCell>
+                              <TableCell>{user.email}</TableCell>
+                              <TableCell>{user.student_number || 'N/A'}</TableCell>
+                              <TableCell>
+                                <span className={`px-2 py-1 rounded-full text-xs ${
+                                  user.role === 'admin' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                                }`}>
+                                  {user.role}
+                                </span>
+                              </TableCell>
+                              <TableCell>{formatDate(user.created_at)}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center space-x-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => handleEditUser(user)}
+                                  >
+                                    <Edit className="h-4 w-4 mr-2" /> Edit
+                                  </Button>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="text-red-500"
+                                    onClick={() => handleDeleteConfirm(user.id, 'user')}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" /> Delete
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                              No users found
+                            </TableCell>
+                          </TableRow>
                         )}
+                      </TableBody>
+                    </Table>
 
-                        <div className="grid gap-2">
-                          <Label htmlFor="edit-notes">Notes</Label>
-                          <Textarea
-                            id="edit-notes"
-                            value={editedUser.notes || ''}
-                            onChange={(e) => setEditedUser({ ...editedUser, notes: e.target.value })}
-                            placeholder="Add any additional notes about the user..."
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="grid gap-2">
-                            <Label htmlFor="edit-password">New Password</Label>
-                            <div className="relative">
-                              <Input
-                                id="edit-password"
-                                type={showPassword ? "text" : "password"}
-                                value={editedUser.password || ''}
-                                onChange={(e) => setEditedUser({ ...editedUser, password: e.target.value })}
-                                placeholder="Enter new password (optional)"
-                              />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                                onClick={() => setShowPassword(!showPassword)}
-                              >
-                                {showPassword ? (
-                                  <EyeOff className="h-4 w-4 text-gray-500" />
-                                ) : (
-                                  <Eye className="h-4 w-4 text-gray-500" />
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                          <div className="grid gap-2">
-                            <Label htmlFor="edit-confirm-password">Confirm New Password</Label>
-                            <div className="relative">
-                              <Input
-                                id="edit-confirm-password"
-                                type={showConfirmPassword ? "text" : "password"}
-                                value={editedUser.confirmPassword || ''}
-                                onChange={(e) => setEditedUser({ ...editedUser, confirmPassword: e.target.value })}
-                                placeholder="Confirm new password"
-                              />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
-                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                              >
-                                {showConfirmPassword ? (
-                                  <EyeOff className="h-4 w-4 text-gray-500" />
-                                ) : (
-                                  <Eye className="h-4 w-4 text-gray-500" />
-                                )}
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="border-t pt-4">
-                          <h4 className="font-medium mb-4">Permissions</h4>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="flex items-center space-x-2">
-                              <Switch
-                                id="can-book"
-                                checked={editedUser.permissions.canBook}
-                                onCheckedChange={(checked) => setEditedUser({
-                                  ...editedUser,
-                                  permissions: { ...editedUser.permissions, canBook: checked }
-                                })}
-                              />
-                              <Label htmlFor="can-book">Can Book Resources</Label>
-                            </div>
-                            {editedUser.role === 'admin' && (
-                              <>
-                                <div className="flex items-center space-x-2">
-                                  <Switch
-                                    id="can-manage-bookings"
-                                    checked={editedUser.permissions.canManageBookings}
-                                    onCheckedChange={(checked) => setEditedUser({
-                                      ...editedUser,
-                                      permissions: { ...editedUser.permissions, canManageBookings: checked }
-                                    })}
-                                  />
-                                  <Label htmlFor="can-manage-bookings">Manage Bookings</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <Switch
-                                    id="can-manage-users"
-                                    checked={editedUser.permissions.canManageUsers}
-                                    onCheckedChange={(checked) => setEditedUser({
-                                      ...editedUser,
-                                      permissions: { ...editedUser.permissions, canManageUsers: checked }
-                                    })}
-                                  />
-                                  <Label htmlFor="can-manage-users">Manage Users</Label>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <Switch
-                                    id="can-manage-resources"
-                                    checked={editedUser.permissions.canManageResources}
-                                    onCheckedChange={(checked) => setEditedUser({
-                                      ...editedUser,
-                                      permissions: { ...editedUser.permissions, canManageResources: checked }
-                                    })}
-                                  />
-                                  <Label htmlFor="can-manage-resources">Manage Resources</Label>
-                                </div>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    <DialogFooter>
-                      <Button variant="outline" onClick={() => {
-                        setIsEditUserOpen(false);
-                        setSelectedUser(null);
-                        setEditedUser(null);
+                    {/* Edit User Dialog */}
+                    <Dialog open={isEditUserOpen} onOpenChange={(open) => {
+                      if (!open) {
                         setFormErrors({});
-                      }}>
-                        Cancel
-                      </Button>
-                      <Button onClick={handleUpdateUser}>Save Changes</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                      }
+                      setIsEditUserOpen(open);
+                    }}>
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>Edit User</DialogTitle>
+                          <DialogDescription>
+                            Update user information. Make changes to the fields below.
+                          </DialogDescription>
+                        </DialogHeader>
+                        {editedUser && (
+                          <div className="grid gap-4 py-4">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="grid gap-2">
+                                <Label htmlFor="edit-name">Full Name</Label>
+                                <Input
+                                  id="edit-name"
+                                  value={editedUser.full_name || ''}
+                                  onChange={(e) => setEditedUser({ ...editedUser, full_name: e.target.value })}
+                                />
+                              </div>
+                              <div className="grid gap-2">
+                                <Label htmlFor="edit-email">Email *</Label>
+                                <Input
+                                  id="edit-email"
+                                  type="email"
+                                  value={editedUser.email}
+                                  onChange={(e) => setEditedUser({ ...editedUser, email: e.target.value })}
+                                  className={formErrors.email ? "border-red-500" : ""}
+                                />
+                                {formErrors.email && (
+                                  <p className="text-sm text-red-500">{formErrors.email}</p>
+                                )}
+                              </div>
+                            </div>
 
-          <TabsContent value="resources" className="space-y-4">
-            <Card>
-              <CardContent className="p-6">
-                <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-lg font-semibold">Resource Management</h3>
-                  <Dialog open={isAddResourceOpen} onOpenChange={setIsAddResourceOpen}>
-                    <DialogTrigger asChild>
-                      <Button>
-                        <Plus className="h-4 w-4 mr-2" /> Add Resource
-                      </Button>
-                    </DialogTrigger>
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Add New Resource</DialogTitle>
-                        <DialogDescription>
-                          Add a new resource to the system. Fill in the details below.
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                          <label htmlFor="resourceName">Resource Name</label>
-                          <Input
-                            id="resourceName"
-                            value={newResource.name}
-                            onChange={(e) => setNewResource({ ...newResource, name: e.target.value })}
-                          />
-                        </div>
-                        <div className="grid gap-2">
-                          <label htmlFor="resourceType">Type</label>
-                          <Select
-                            value={newResource.type}
-                            onValueChange={(value) => setNewResource({ ...newResource, type: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Select type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="workstation">Workstation</SelectItem>
-                              <SelectItem value="room">Room</SelectItem>
-                              <SelectItem value="equipment">Equipment</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div className="grid gap-2">
-                          <label htmlFor="capacity">Capacity (if applicable)</label>
-                          <Input
-                            id="capacity"
-                            type="number"
-                            value={newResource.capacity}
-                            onChange={(e) => setNewResource({ ...newResource, capacity: e.target.value })}
-                          />
-                        </div>
-                      </div>
-                      <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsAddResourceOpen(false)}>
-                          Cancel
-                        </Button>
-                        <Button onClick={handleAddResource}>Add Resource</Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-                </div>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="grid gap-2">
+                                <Label htmlFor="edit-role">Role *</Label>
+                                <Select
+                                  value={editedUser.role}
+                                  onValueChange={(value) => setEditedUser({ ...editedUser, role: value as 'admin' | 'user' })}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Select role" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="user">User</SelectItem>
+                                    <SelectItem value="admin">Administrator</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="grid gap-2">
+                                <Label htmlFor="edit-student-number">Student Number</Label>
+                                <Input
+                                  id="edit-student-number"
+                                  value={editedUser.student_number || ''}
+                                  onChange={(e) => setEditedUser({ ...editedUser, student_number: e.target.value })}
+                                  placeholder="Enter student number"
+                                />
+                              </div>
+                            </div>
 
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Last Maintenance</TableHead>
-                      <TableHead>Capacity</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredResources.map((resource) => (
-                      <TableRow key={resource.id}>
-                        <TableCell>{resource.name}</TableCell>
-                        <TableCell>{resource.type}</TableCell>
-                        <TableCell>
-                          <span className={`px-2 py-1 rounded-full text-xs ${
-                            resource.status === 'available' ? 'bg-green-100 text-green-800' :
-                            resource.status === 'in-use' ? 'bg-blue-100 text-blue-800' :
-                            'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {resource.status}
-                          </span>
-                        </TableCell>
-                        <TableCell>{resource.lastMaintenance}</TableCell>
-                        <TableCell>{resource.capacity || 'N/A'}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center space-x-2">
-                            <Button variant="outline" size="sm">
-                              <Settings className="h-4 w-4 mr-2" /> Maintenance
+                            <div className="grid gap-2">
+                              <Label htmlFor="edit-phone">Phone Number</Label>
+                              <Input
+                                id="edit-phone"
+                                value={editedUser.phone || ''}
+                                onChange={(e) => setEditedUser({ ...editedUser, phone: e.target.value })}
+                                className={formErrors.phoneNumber ? "border-red-500" : ""}
+                              />
+                              {formErrors.phoneNumber && (
+                                <p className="text-sm text-red-500">{formErrors.phoneNumber}</p>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="grid gap-2">
+                                <Label htmlFor="edit-password">New Password</Label>
+                                <div className="relative">
+                                  <Input
+                                    id="edit-password"
+                                    type={showPassword ? "text" : "password"}
+                                    value={editedUser.password || ''}
+                                    onChange={(e) => setEditedUser({ ...editedUser, password: e.target.value })}
+                                    placeholder="Enter new password (optional)"
+                                    className={formErrors.password ? "border-red-500" : ""}
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                  >
+                                    {showPassword ? (
+                                      <EyeOff className="h-4 w-4 text-gray-500" />
+                                    ) : (
+                                      <Eye className="h-4 w-4 text-gray-500" />
+                                    )}
+                                  </Button>
+                                </div>
+                                {formErrors.password && (
+                                  <p className="text-sm text-red-500">{formErrors.password}</p>
+                                )}
+                                <p className="text-xs text-muted-foreground">
+                                  Leave blank to keep current password
+                                </p>
+                              </div>
+                              <div className="grid gap-2">
+                                <Label htmlFor="edit-confirm-password">Confirm New Password</Label>
+                                <div className="relative">
+                                  <Input
+                                    id="edit-confirm-password"
+                                    type={showConfirmPassword ? "text" : "password"}
+                                    value={editedUser.confirmPassword || ''}
+                                    onChange={(e) => setEditedUser({ ...editedUser, confirmPassword: e.target.value })}
+                                    placeholder="Confirm new password"
+                                    className={formErrors.confirmPassword ? "border-red-500" : ""}
+                                  />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                  >
+                                    {showConfirmPassword ? (
+                                      <EyeOff className="h-4 w-4 text-gray-500" />
+                                    ) : (
+                                      <Eye className="h-4 w-4 text-gray-500" />
+                                    )}
+                                  </Button>
+                                </div>
+                                {formErrors.confirmPassword && (
+                                  <p className="text-sm text-red-500">{formErrors.confirmPassword}</p>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => {
+                            setIsEditUserOpen(false);
+                            setSelectedUser(null);
+                            setEditedUser(null);
+                            setFormErrors({});
+                          }}>
+                            Cancel
+                          </Button>
+                          <Button onClick={handleUpdateUser}>Save Changes</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="resources" className="space-y-4">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-lg font-semibold">Resource Management</h3>
+                      <Dialog open={isAddResourceOpen} onOpenChange={setIsAddResourceOpen}>
+                        <DialogTrigger asChild>
+                          <Button>
+                            <Plus className="h-4 w-4 mr-2" /> Add Resource
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>Add New Resource</DialogTitle>
+                            <DialogDescription>
+                              Add a new resource to the system. Fill in the details below.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                              <label htmlFor="resourceName">Resource Name *</label>
+                              <Input
+                                id="resourceName"
+                                value={newRoom.name}
+                                onChange={(e) => setNewRoom({ ...newRoom, name: e.target.value })}
+                                className={formErrors.name ? "border-red-500" : ""}
+                              />
+                              {formErrors.name && (
+                                <p className="text-sm text-red-500">{formErrors.name}</p>
+                              )}
+                            </div>
+                            <div className="grid gap-2">
+                              <label htmlFor="resourceType">Type *</label>
+                              <Select
+                                value={newRoom.type}
+                                onValueChange={(value) => setNewRoom({ ...newRoom, type: value })}
+                              >
+                                <SelectTrigger className={formErrors.type ? "border-red-500" : ""}>
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Workstation">Workstation</SelectItem>
+                                  <SelectItem value="Room">Room</SelectItem>
+                                  <SelectItem value="Equipment">Equipment</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              {formErrors.type && (
+                                <p className="text-sm text-red-500">{formErrors.type}</p>
+                              )}
+                            </div>
+                            <div className="grid gap-2">
+                              <label htmlFor="capacity">Capacity (if applicable)</label>
+                              <Input
+                                id="capacity"
+                                type="number"
+                                value={newRoom.capacity?.toString() || ''}
+                                onChange={(e) => setNewRoom({ ...newRoom, capacity: e.target.value ? parseInt(e.target.value) : undefined })}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <label htmlFor="description">Description</label>
+                              <Textarea
+                                id="description"
+                                value={newRoom.description || ''}
+                                onChange={(e) => setNewRoom({ ...newRoom, description: e.target.value })}
+                                placeholder="Enter resource description"
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <label htmlFor="status">Status</label>
+                              <Select
+                                value={newRoom.status}
+                                onValueChange={(value) => setNewRoom({ ...newRoom, status: value as 'available' | 'in-use' | 'maintenance' })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="available">Available</SelectItem>
+                                  <SelectItem value="in-use">In Use</SelectItem>
+                                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                          <DialogFooter>
+                            <Button variant="outline" onClick={() => {
+                              setIsAddResourceOpen(false);
+                              setFormErrors({});
+                            }}>
+                              Cancel
                             </Button>
-                            <Button variant="outline" size="sm" className="text-red-500">
-                              <AlertCircle className="h-4 w-4 mr-2" /> Report Issue
+                            <Button onClick={handleAddRoom}>Add Resource</Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </div>
+
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Capacity</TableHead>
+                          <TableHead>Description</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredRooms.length > 0 ? (
+                          filteredRooms.map((room) => (
+                            <TableRow key={room.id}>
+                              <TableCell>{room.name}</TableCell>
+                              <TableCell>{room.type}</TableCell>
+                              <TableCell>
+                                <span className={`px-2 py-1 rounded-full text-xs ${
+                                  room.status === 'available' ? 'bg-green-100 text-green-800' :
+                                  room.status === 'in-use' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-yellow-100 text-yellow-800'
+                                }`}>
+                                  {room.status}
+                                </span>
+                              </TableCell>
+                              <TableCell>{room.capacity || 'N/A'}</TableCell>
+                              <TableCell>{room.description || 'No description'}</TableCell>
+                              <TableCell>
+                                <div className="flex items-center space-x-2">
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => handleEditRoom(room)}
+                                  >
+                                    <Edit className="h-4 w-4 mr-2" /> Edit
+                                  </Button>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="text-red-500"
+                                    onClick={() => handleDeleteConfirm(room.id, 'room')}
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" /> Delete
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                              No rooms found
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+
+                    {/* Edit Room Dialog */}
+                    <Dialog open={isEditResourceOpen} onOpenChange={(open) => {
+                      if (!open) {
+                        setFormErrors({});
+                      }
+                      setIsEditResourceOpen(open);
+                    }}>
+                      <DialogContent>
+                        <DialogHeader>
+                          <DialogTitle>Edit Resource</DialogTitle>
+                          <DialogDescription>
+                            Update resource information. Make changes to the fields below.
+                          </DialogDescription>
+                        </DialogHeader>
+                        {editedRoom && (
+                          <div className="grid gap-4 py-4">
+                            <div className="grid gap-2">
+                              <Label htmlFor="edit-resource-name">Resource Name *</Label>
+                              <Input
+                                id="edit-resource-name"
+                                value={editedRoom.name}
+                                onChange={(e) => setEditedRoom({ ...editedRoom, name: e.target.value })}
+                                className={formErrors.name ? "border-red-500" : ""}
+                              />
+                              {formErrors.name && (
+                                <p className="text-sm text-red-500">{formErrors.name}</p>
+                              )}
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="edit-resource-type">Type *</Label>
+                              <Select
+                                value={editedRoom.type}
+                                onValueChange={(value) => setEditedRoom({ ...editedRoom, type: value })}
+                              >
+                                <SelectTrigger className={formErrors.type ? "border-red-500" : ""}>
+                                  <SelectValue placeholder="Select type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="Workstation">Workstation</SelectItem>
+                                  <SelectItem value="Room">Room</SelectItem>
+                                  <SelectItem value="Equipment">Equipment</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              {formErrors.type && (
+                                <p className="text-sm text-red-500">{formErrors.type}</p>
+                              )}
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="edit-status">Status</Label>
+                              <Select
+                                value={editedRoom.status}
+                                onValueChange={(value) => setEditedRoom({ ...editedRoom, status: value as 'available' | 'in-use' | 'maintenance' })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="available">Available</SelectItem>
+                                  <SelectItem value="in-use">In Use</SelectItem>
+                                  <SelectItem value="maintenance">Maintenance</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="edit-capacity">Capacity</Label>
+                              <Input
+                                id="edit-capacity"
+                                type="number"
+                                value={editedRoom.capacity?.toString() || ''}
+                                onChange={(e) => setEditedRoom({ ...editedRoom, capacity: e.target.value ? parseInt(e.target.value) : undefined })}
+                              />
+                            </div>
+                            <div className="grid gap-2">
+                              <Label htmlFor="edit-description">Description</Label>
+                              <Textarea
+                                id="edit-description"
+                                value={editedRoom.description || ''}
+                                onChange={(e) => setEditedRoom({ ...editedRoom, description: e.target.value })}
+                                placeholder="Enter resource description"
+                              />
+                            </div>
+                          </div>
+                        )}
+                        <DialogFooter>
+                          <Button variant="outline" onClick={() => {
+                            setIsEditResourceOpen(false);
+                            setSelectedRoom(null);
+                            setEditedRoom(null);
+                            setFormErrors({});
+                          }}>
+                            Cancel
+                          </Button>
+                          <Button onClick={handleUpdateRoom}>Save Changes</Button>
+                        </DialogFooter>
+                      </DialogContent>
+                    </Dialog>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="settings" className="space-y-4">
+                <Card>
+                  <CardContent className="p-6">
+                    <div className="space-y-6">
+                      <div>
+                        <h3 className="text-lg font-semibold mb-4">System Settings</h3>
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="font-medium">Email Notifications</h4>
+                              <p className="text-sm text-muted-foreground">Send email notifications for booking updates</p>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => setIsEmailSettingsOpen(true)}>
+                              <Bell className="h-4 w-4 mr-2" /> Configure
                             </Button>
                           </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                          
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="font-medium">Booking Rules</h4>
+                              <p className="text-sm text-muted-foreground">Configure booking time limits and restrictions</p>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => setIsBookingRulesOpen(true)}>
+                              <Settings className="h-4 w-4 mr-2" /> Configure
+                            </Button>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="font-medium">System Maintenance</h4>
+                              <p className="text-sm text-muted-foreground">Schedule system maintenance and updates</p>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => setIsMaintenanceOpen(true)}>
+                              <Settings className="h-4 w-4 mr-2" /> Configure
+                            </Button>
+                          </div>
 
-          <TabsContent value="settings" className="space-y-4">
-            <Card>
-              <CardContent className="p-6">
-                <div className="space-y-6">
-                  <div>
-                    <h3 className="text-lg font-semibold mb-4">System Settings</h3>
-                    <div className="space-y-4">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Email Notifications</h4>
-                          <p className="text-sm text-muted-foreground">Send email notifications for booking updates</p>
-                        </div>
-                        <Button variant="outline" size="sm" onClick={() => setIsEmailSettingsOpen(true)}>
-                          <Bell className="h-4 w-4 mr-2" /> Configure
-                        </Button>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Booking Rules</h4>
-                          <p className="text-sm text-muted-foreground">Configure booking time limits and restrictions</p>
-                        </div>
-                        <Button variant="outline" size="sm" onClick={() => setIsBookingRulesOpen(true)}>
-                          <Settings className="h-4 w-4 mr-2" /> Configure
-                        </Button>
-                      </div>
-                      
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">System Maintenance</h4>
-                          <p className="text-sm text-muted-foreground">Schedule system maintenance and updates</p>
-                        </div>
-                        <Button variant="outline" size="sm" onClick={() => setIsMaintenanceOpen(true)}>
-                          <Settings className="h-4 w-4 mr-2" /> Configure
-                        </Button>
-                      </div>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="font-medium">User Permissions</h4>
+                              <p className="text-sm text-muted-foreground">Manage user roles and access levels</p>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => setIsPermissionsOpen(true)}>
+                              <Shield className="h-4 w-4 mr-2" /> Configure
+                            </Button>
+                          </div>
 
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">User Permissions</h4>
-                          <p className="text-sm text-muted-foreground">Manage user roles and access levels</p>
-                        </div>
-                        <Button variant="outline" size="sm" onClick={() => setIsPermissionsOpen(true)}>
-                          <Shield className="h-4 w-4 mr-2" /> Configure
-                        </Button>
-                      </div>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="font-medium">Reports & Analytics</h4>
+                              <p className="text-sm text-muted-foreground">View system usage statistics and reports</p>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => setIsReportsOpen(true)}>
+                              <BarChart className="h-4 w-4 mr-2" /> View
+                            </Button>
+                          </div>
 
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">Reports & Analytics</h4>
-                          <p className="text-sm text-muted-foreground">View system usage statistics and reports</p>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <h4 className="font-medium">System Logs</h4>
+                              <p className="text-sm text-muted-foreground">View system activity and error logs</p>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => setIsLogsOpen(true)}>
+                              <FileText className="h-4 w-4 mr-2" /> View
+                            </Button>
+                          </div>
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => setIsReportsOpen(true)}>
-                          <BarChart className="h-4 w-4 mr-2" /> View
-                        </Button>
-                      </div>
-
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <h4 className="font-medium">System Logs</h4>
-                          <p className="text-sm text-muted-foreground">View system activity and error logs</p>
-                        </div>
-                        <Button variant="outline" size="sm" onClick={() => setIsLogsOpen(true)}>
-                          <FileText className="h-4 w-4 mr-2" /> View
-                        </Button>
                       </div>
                     </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </>
+          )}
         </Tabs>
       </div>
 
@@ -1460,6 +1811,24 @@ const Admin = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmUpdateUser}>Save Changes</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this {itemToDelete?.type}? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -1656,11 +2025,11 @@ const Admin = () => {
               <div className="grid gap-2">
                 <Label>Booking Details</Label>
                 <div className="text-sm space-y-1">
-                  <p><span className="font-medium">Resource:</span> {selectedBooking.resource}</p>
-                  <p><span className="font-medium">User:</span> {selectedBooking.user}</p>
-                  <p><span className="font-medium">Date:</span> {selectedBooking.date}</p>
-                  <p><span className="font-medium">Time:</span> {selectedBooking.time}</p>
-                  <p><span className="font-medium">Purpose:</span> {selectedBooking.purpose}</p>
+                  <p><span className="font-medium">Resource:</span> {selectedBooking.room_name}</p>
+                  <p><span className="font-medium">User:</span> {selectedBooking.user_name}</p>
+                  <p><span className="font-medium">Date:</span> {formatDate(selectedBooking.date)}</p>
+                  <p><span className="font-medium">Time:</span> {selectedBooking.time_slot}</p>
+                  <p><span className="font-medium">Purpose:</span> {selectedBooking.purpose || 'Not specified'}</p>
                 </div>
               </div>
 
@@ -1703,4 +2072,4 @@ const Admin = () => {
   );
 };
 
-export default Admin; 
+export default Admin;
