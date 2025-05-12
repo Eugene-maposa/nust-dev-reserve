@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -36,6 +35,11 @@ const users = [
   }
 ];
 
+// Development mode flag - set to true to enable auto-login for development
+const DEV_MODE = true;
+const DEV_AUTO_LOGIN = true; // Set to true to automatically login as admin on page load
+const DEV_USER_ROLE = 'admin'; // 'admin' or 'lecturer'
+
 const LoginForm = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -43,6 +47,36 @@ const LoginForm = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+
+  // Auto-login for development mode
+  useEffect(() => {
+    if (DEV_MODE && DEV_AUTO_LOGIN) {
+      const autoLogin = async () => {
+        const userToLogin = DEV_USER_ROLE === 'admin' ? users[0] : users[1];
+        
+        // Store user data in localStorage
+        localStorage.setItem('user', JSON.stringify({
+          email: userToLogin.email,
+          role: userToLogin.role,
+          permissions: userToLogin.permissions
+        }));
+
+        toast({
+          title: "Development Mode",
+          description: `Auto-logged in as ${userToLogin.role}`,
+        });
+
+        // Navigate based on role
+        if (userToLogin.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
+      };
+      
+      autoLogin();
+    }
+  }, [navigate, toast]);
 
   const handleEmailLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -94,6 +128,16 @@ const LoginForm = () => {
     }
   };
 
+  // Skip rendering the login form if auto-login is enabled
+  if (DEV_MODE && DEV_AUTO_LOGIN) {
+    return (
+      <div className="flex flex-col items-center justify-center space-y-4">
+        <Loader2 className="h-8 w-8 animate-spin text-university-blue" />
+        <p>Development mode: Auto-logging in as {DEV_USER_ROLE}...</p>
+      </div>
+    );
+  }
+
   const handleCardScan = () => {
     toast({
       title: "Card Scanner",
@@ -113,6 +157,48 @@ const LoginForm = () => {
 
   return (
     <div className="w-full max-w-md mx-auto">
+      {DEV_MODE && (
+        <div className="mb-4 p-2 bg-yellow-50 border border-yellow-200 rounded-md">
+          <p className="text-sm text-yellow-700 font-medium">Development Mode Active</p>
+          <div className="flex gap-2 mt-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="text-xs flex-1"
+              onClick={() => {
+                const adminUser = users[0];
+                localStorage.setItem('user', JSON.stringify({
+                  email: adminUser.email,
+                  role: adminUser.role,
+                  permissions: adminUser.permissions
+                }));
+                navigate('/admin');
+              }}
+            >
+              Bypass as Admin
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline" 
+              className="text-xs flex-1"
+              onClick={() => {
+                const lecturerUser = users[1];
+                localStorage.setItem('user', JSON.stringify({
+                  email: lecturerUser.email,
+                  role: lecturerUser.role,
+                  permissions: lecturerUser.permissions
+                }));
+                navigate('/dashboard');
+              }}
+            >
+              Bypass as Lecturer
+            </Button>
+          </div>
+        </div>
+      )}
+      
       <Tabs defaultValue="email" className="w-full">
         <TabsList className="grid grid-cols-2 mb-6">
           <TabsTrigger value="email">Email Login</TabsTrigger>
