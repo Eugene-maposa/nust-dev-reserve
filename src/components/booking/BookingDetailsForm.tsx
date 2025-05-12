@@ -82,8 +82,14 @@ const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({ bookingData, on
     return (
       <BookingConfirmation
         bookingData={{
-          ...bookingData,
-          ...formData,
+          date: bookingData.date,
+          room: bookingData.room,
+          timeSlot: bookingData.timeSlot,
+          fullName: formData.fullName,
+          studentNumber: formData.studentNumber,
+          email: formData.email,
+          phone: formData.phone,
+          purpose: formData.purpose
         }}
         onBack={() => {
           setShowConfirmation(false);
@@ -215,4 +221,4 @@ const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({ bookingData, on
   );
 };
 
-export default BookingDetailsForm; 
+export default BookingDetailsForm;

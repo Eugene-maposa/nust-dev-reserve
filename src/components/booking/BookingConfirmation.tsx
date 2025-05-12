@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,6 +13,8 @@ interface BookingConfirmationProps {
     fullName: string;
     studentNumber: string;
     email: string;
+    phone?: string;
+    purpose?: string;
   };
   onBack: () => void;
 }
@@ -77,4 +80,4 @@ const BookingConfirmation: React.FC<BookingConfirmationProps> = ({ bookingData, 
   );
 };
 
-export default BookingConfirmation; 
+export default BookingConfirmation;
