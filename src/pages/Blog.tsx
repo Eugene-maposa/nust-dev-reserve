@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
@@ -87,7 +86,7 @@ export const blogPosts: BlogPost[] = [
   },
 ];
 
-// Define the database blog post type
+// Define the database blog post type with proper author type
 export interface SupabaseBlogPost {
   id: string;
   title: string;
@@ -102,7 +101,7 @@ export interface SupabaseBlogPost {
     id: string;
     name: string;
     avatar_initials: string;
-  } | null;
+  }[];
 }
 
 // Function to fetch blog posts from Supabase
@@ -130,7 +129,7 @@ const fetchBlogPosts = async (): Promise<BlogPost[]> => {
   }
 
   // Transform data to match the BlogPost interface
-  return (data as SupabaseBlogPost[]).map(post => ({
+  return (data as unknown as SupabaseBlogPost[]).map(post => ({
     id: post.id,
     title: post.title,
     excerpt: post.excerpt,

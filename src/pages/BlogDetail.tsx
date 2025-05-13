@@ -29,9 +29,9 @@ interface BlogPostData {
   author_id: string;
   published: boolean;
   author: Author[] | null;
-  // Add these fields to match the BlogPost interface
-  date?: string;
-  readTime?: string;
+  // Additional fields for display
+  date: string;
+  readTime: string;
 }
 
 const fetchBlogPost = async (id: string): Promise<BlogPostData> => {
@@ -64,7 +64,7 @@ const fetchBlogPost = async (id: string): Promise<BlogPostData> => {
     readTime: '5 min read'
   };
 
-  return formattedData as BlogPostData;
+  return formattedData as unknown as BlogPostData;
 };
 
 const formatDate = (dateString: string) => {
@@ -197,7 +197,7 @@ const BlogDetail = () => {
             
             <div className="relative h-[400px] rounded-lg overflow-hidden mb-8">
               <img 
-                src={post?.image_url || displayPost?.imageUrl}
+                src={post?.image_url || (displayPost as any).imageUrl}
                 alt={displayPost.title}
                 className="w-full h-full object-cover"
               />
@@ -207,11 +207,11 @@ const BlogDetail = () => {
               <div className="flex items-center">
                 <Avatar className="h-10 w-10 mr-3">
                   <AvatarFallback className="bg-university-blue text-white">
-                    {post?.author?.[0]?.avatar_initials || displayPost?.author?.avatarInitials}
+                    {post?.author?.[0]?.avatar_initials || (displayPost as any).author?.avatarInitials}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-semibold">{post?.author?.[0]?.name || displayPost?.author?.name}</p>
+                  <p className="font-semibold">{post?.author?.[0]?.name || (displayPost as any).author?.name}</p>
                   <div className="flex items-center text-sm text-gray-500">
                     <Calendar className="h-4 w-4 mr-1" />
                     <span>{formattedDate}</span>
