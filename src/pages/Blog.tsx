@@ -113,12 +113,15 @@ const fetchBlogPosts = async (): Promise<BlogPost[]> => {
       id,
       title,
       excerpt,
+      content,
       image_url,
       created_at,
       updated_at,
+      published,
       author_id,
-      author:author_id(id, name, avatar_initials)
+      author:blog_authors(id, name, avatar_initials)
     `)
+    .eq('published', true)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -132,8 +135,8 @@ const fetchBlogPosts = async (): Promise<BlogPost[]> => {
     title: post.title,
     excerpt: post.excerpt,
     author: {
-      name: post.author?.name || 'Unknown Author',
-      avatarInitials: post.author?.avatar_initials || 'UA',
+      name: post.author?.[0]?.name || 'Unknown Author',
+      avatarInitials: post.author?.[0]?.avatar_initials || 'UA',
     },
     date: new Date(post.created_at).toLocaleDateString('en-US', {
       year: 'numeric',

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -92,10 +91,12 @@ const BlogForm = () => {
     queryFn: fetchAuthorProfile,
     retry: 1,
     meta: {
-      onError: (error: Error) => {
-        console.error('Error fetching author profile:', error);
-        toast.error('You need to be logged in to create or edit blog posts');
-        navigate('/login');
+      onSettled: (data: any, error: Error | null) => {
+        if (error) {
+          console.error('Error fetching author profile:', error);
+          toast.error('You need to be logged in to create or edit blog posts');
+          navigate('/login');
+        }
       }
     }
   });
@@ -107,10 +108,12 @@ const BlogForm = () => {
     enabled: isEditing,
     retry: 1,
     meta: {
-      onError: (error: Error) => {
-        console.error('Error fetching post:', error);
-        toast.error('Failed to fetch blog post');
-        navigate('/blog');
+      onSettled: (data: any, error: Error | null) => {
+        if (error) {
+          console.error('Error fetching post:', error);
+          toast.error('Failed to fetch blog post');
+          navigate('/blog');
+        }
       }
     }
   });
@@ -131,16 +134,15 @@ const BlogForm = () => {
     mutationFn: async (values: FormValues) => {
       if (!author) throw new Error('No author profile found');
       
-      const postData = {
-        ...values,
-        author_id: author.id,
-        published: true,
-      };
-      
       if (isEditing) {
         const { error } = await supabase
           .from('blog_posts')
-          .update(postData)
+          .update({
+            title: values.title,
+            excerpt: values.excerpt,
+            content: values.content,
+            image_url: values.image_url
+          })
           .eq('id', id!);
           
         if (error) throw error;

@@ -28,7 +28,7 @@ interface BlogPostData {
   updated_at: string;
   author_id: string;
   published: boolean;
-  author: Author | null;
+  author: Author[] | null;
   // Add these fields to match the BlogPost interface
   date?: string;
   readTime?: string;
@@ -39,7 +39,7 @@ const fetchBlogPost = async (id: string): Promise<BlogPostData> => {
     .from('blog_posts')
     .select(`
       *,
-      author:author_id(
+      author:blog_authors(
         id,
         name,
         avatar_initials
@@ -207,11 +207,11 @@ const BlogDetail = () => {
               <div className="flex items-center">
                 <Avatar className="h-10 w-10 mr-3">
                   <AvatarFallback className="bg-university-blue text-white">
-                    {post?.author?.avatar_initials || displayPost?.author?.avatarInitials}
+                    {post?.author?.[0]?.avatar_initials || displayPost?.author?.avatarInitials}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-semibold">{post?.author?.name || displayPost?.author?.name}</p>
+                  <p className="font-semibold">{post?.author?.[0]?.name || displayPost?.author?.name}</p>
                   <div className="flex items-center text-sm text-gray-500">
                     <Calendar className="h-4 w-4 mr-1" />
                     <span>{formattedDate}</span>
