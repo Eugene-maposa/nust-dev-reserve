@@ -1,12 +1,17 @@
-import React from 'react';
+
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
 import PageHeader from '@/components/ui/PageHeader';
 import BlogCard, { BlogPost } from '@/components/blog/BlogCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Search } from 'lucide-react';
+import { Search, Plus } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
-// Sample blog posts data (this should be moved to a separate data file or fetched from an API)
+// Fallback static blog posts data (used if Supabase fetch fails)
 export const blogPosts: BlogPost[] = [
   {
     id: 1,
@@ -82,15 +87,78 @@ export const blogPosts: BlogPost[] = [
   },
 ];
 
+// Function to fetch blog posts from Supabase
+const fetchBlogPosts = async () => {
+  const { data, error } = await supabase
+    .from('blog_posts')
+    .select(`
+      id,
+      title,
+      excerpt,
+      image_url,
+      created_at,
+      updated_at,
+      author:author_id (
+        id,
+        name,
+        avatar_initials
+      )
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching blog posts:', error);
+    throw error;
+  }
+
+  // Transform data to match the BlogPost interface
+  return data.map(post => ({
+    id: post.id,
+    title: post.title,
+    excerpt: post.excerpt,
+    author: {
+      name: post.author?.name || 'Unknown Author',
+      avatarInitials: post.author?.avatar_initials || 'UA',
+    },
+    date: new Date(post.created_at).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }),
+    readTime: '5 min read', // Default read time
+    imageUrl: post.image_url,
+  })) as BlogPost[];
+};
+
 const Blog = () => {
-  const [searchTerm, setSearchTerm] = React.useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Fetch blog posts using React Query
+  const { data: supabasePosts, isLoading, error } = useQuery({
+    queryKey: ['blogPosts'],
+    queryFn: fetchBlogPosts,
+    retry: 1,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+
+  // If Supabase fetch fails, use the static blog posts data
+  const posts = supabasePosts || blogPosts;
+  
+  // Show error toast if fetch fails
+  React.useEffect(() => {
+    if (error) {
+      toast.error('Failed to fetch blog posts', {
+        description: 'Using fallback data instead.'
+      });
+    }
+  }, [error]);
   
   const filteredPosts = searchTerm
-    ? blogPosts.filter(post => 
+    ? posts.filter(post => 
         post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
         post.excerpt.toLowerCase().includes(searchTerm.toLowerCase())
       )
-    : blogPosts;
+    : posts;
 
   return (
     <Layout>
@@ -99,8 +167,8 @@ const Blog = () => {
         subtitle="Latest news and information from the Software Development Centre"
       />
       <div className="container mx-auto px-4 py-12">
-        <div className="max-w-md mx-auto mb-12">
-          <div className="relative">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-4">
+          <div className="w-full md:w-96 relative">
             <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
             <Input
               type="search"
@@ -110,29 +178,51 @@ const Blog = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
+          <Link to="/blog/create">
+            <Button className="w-full md:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Create Post
+            </Button>
+          </Link>
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredPosts.length > 0 ? (
-            filteredPosts.map((post) => (
+        {isLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-pulse">
+                <div className="h-48 bg-gray-200 rounded mb-4"></div>
+                <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded mb-1"></div>
+                <div className="h-4 bg-gray-200 rounded w-5/6 mb-4"></div>
+                <div className="flex justify-between">
+                  <div className="h-6 bg-gray-200 rounded-full w-6"></div>
+                  <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredPosts.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {filteredPosts.map((post) => (
               <BlogCard key={post.id} post={post} />
-            ))
-          ) : (
-            <div className="col-span-3 text-center py-12">
-              <h3 className="text-xl font-semibold mb-2">No posts found</h3>
-              <p className="text-gray-600">
-                Try adjusting your search terms or browse all posts.
-              </p>
-              <Button 
-                className="mt-4"
-                variant="outline"
-                onClick={() => setSearchTerm('')}
-              >
-                Clear Search
-              </Button>
-            </div>
-          )}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <div className="col-span-3 text-center py-12">
+            <h3 className="text-xl font-semibold mb-2">No posts found</h3>
+            <p className="text-gray-600">
+              Try adjusting your search terms or browse all posts.
+            </p>
+            <Button 
+              className="mt-4"
+              variant="outline"
+              onClick={() => setSearchTerm('')}
+            >
+              Clear Search
+            </Button>
+          </div>
+        )}
       </div>
     </Layout>
   );

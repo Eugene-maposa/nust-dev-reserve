@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
@@ -5,7 +6,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Calendar } from 'lucide-react';
 
 export interface BlogPost {
-  id: number;
+  id: number | string;  // Support both number (static) and string (Supabase UUID)
   title: string;
   excerpt: string;
   author: {

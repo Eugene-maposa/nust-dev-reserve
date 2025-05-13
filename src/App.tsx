@@ -11,6 +11,7 @@ import Bookings from "@/pages/Bookings";
 import Map from "@/pages/Map";
 import Blog from "@/pages/Blog";
 import BlogDetail from "@/pages/BlogDetail";
+import BlogForm from "@/pages/BlogForm";
 import About from "@/pages/About";
 import NotFound from "@/pages/NotFound";
 import Admin from "@/pages/Admin";
@@ -39,6 +40,8 @@ const App = () => (
             <Route path="/map" element={<Map />} />
             <Route path="/blog" element={<Blog />} />
             <Route path="/blog/:id" element={<BlogDetail />} />
+            <Route path="/blog/create" element={<BlogForm />} />
+            <Route path="/blog/edit/:id" element={<BlogForm />} />
             <Route path="/about" element={<About />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/dashboard" element={<Dashboard />} />
