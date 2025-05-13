@@ -87,14 +87,16 @@ const BlogForm = () => {
   const queryClient = useQueryClient();
 
   // Get current user's author profile
-  const { data: author, isLoading: authorLoading } = useQuery({
+  const { data: author, isLoading: authorLoading, error: authorError } = useQuery({
     queryKey: ['authorProfile'],
     queryFn: fetchAuthorProfile,
     retry: 1,
-    onError: (error) => {
-      console.error('Error fetching author profile:', error);
-      toast.error('You need to be logged in to create or edit blog posts');
-      navigate('/login');
+    meta: {
+      onError: (error: Error) => {
+        console.error('Error fetching author profile:', error);
+        toast.error('You need to be logged in to create or edit blog posts');
+        navigate('/login');
+      }
     }
   });
 
@@ -104,10 +106,12 @@ const BlogForm = () => {
     queryFn: () => fetchBlogPost(id!),
     enabled: isEditing,
     retry: 1,
-    onError: (error) => {
-      console.error('Error fetching post:', error);
-      toast.error('Failed to fetch blog post');
-      navigate('/blog');
+    meta: {
+      onError: (error: Error) => {
+        console.error('Error fetching post:', error);
+        toast.error('Failed to fetch blog post');
+        navigate('/blog');
+      }
     }
   });
 
@@ -144,7 +148,14 @@ const BlogForm = () => {
       } else {
         const { data, error } = await supabase
           .from('blog_posts')
-          .insert(postData)
+          .insert({
+            title: values.title,
+            excerpt: values.excerpt,
+            content: values.content,
+            image_url: values.image_url,
+            author_id: author.id,
+            published: true
+          })
           .select('id')
           .single();
           
@@ -172,6 +183,18 @@ const BlogForm = () => {
   };
 
   const isLoading = authorLoading || postLoading || mutation.isPending;
+
+  if (authorError) {
+    return (
+      <Layout>
+        <PageHeader title="Authentication Required" />
+        <div className="container mx-auto px-4 py-12 text-center">
+          <p className="mb-4">You need to be logged in to create or edit blog posts.</p>
+          <Button onClick={() => navigate('/login')}>Go to Login</Button>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>

@@ -87,8 +87,26 @@ export const blogPosts: BlogPost[] = [
   },
 ];
 
+// Define the database blog post type
+export interface SupabaseBlogPost {
+  id: string;
+  title: string;
+  excerpt: string;
+  content: string;
+  image_url: string;
+  created_at: string;
+  updated_at: string;
+  published: boolean;
+  author_id: string;
+  author?: {
+    id: string;
+    name: string;
+    avatar_initials: string;
+  } | null;
+}
+
 // Function to fetch blog posts from Supabase
-const fetchBlogPosts = async () => {
+const fetchBlogPosts = async (): Promise<BlogPost[]> => {
   const { data, error } = await supabase
     .from('blog_posts')
     .select(`
@@ -98,11 +116,8 @@ const fetchBlogPosts = async () => {
       image_url,
       created_at,
       updated_at,
-      author:author_id (
-        id,
-        name,
-        avatar_initials
-      )
+      author_id,
+      author:author_id(id, name, avatar_initials)
     `)
     .order('created_at', { ascending: false });
 
@@ -112,7 +127,7 @@ const fetchBlogPosts = async () => {
   }
 
   // Transform data to match the BlogPost interface
-  return data.map(post => ({
+  return (data as SupabaseBlogPost[]).map(post => ({
     id: post.id,
     title: post.title,
     excerpt: post.excerpt,
@@ -127,7 +142,7 @@ const fetchBlogPosts = async () => {
     }),
     readTime: '5 min read', // Default read time
     imageUrl: post.image_url,
-  })) as BlogPost[];
+  }));
 };
 
 const Blog = () => {

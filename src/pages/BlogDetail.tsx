@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
@@ -10,6 +10,7 @@ import { Calendar, Clock, ArrowLeft, Trash, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { blogPosts } from '@/pages/Blog';
 
 interface Author {
   id: string;
@@ -27,18 +28,18 @@ interface BlogPostData {
   updated_at: string;
   author_id: string;
   published: boolean;
-  author: Author;
+  author: Author | null;
+  // Add these fields to match the BlogPost interface
+  date?: string;
+  readTime?: string;
 }
 
-// Fallback to static data if Supabase fetch fails
-import { blogPosts } from '@/pages/Blog';
-
-const fetchBlogPost = async (id: string): Promise<BlogPostData | null> => {
+const fetchBlogPost = async (id: string): Promise<BlogPostData> => {
   const { data, error } = await supabase
     .from('blog_posts')
     .select(`
       *,
-      author:author_id (
+      author:author_id(
         id,
         name,
         avatar_initials
@@ -52,7 +53,18 @@ const fetchBlogPost = async (id: string): Promise<BlogPostData | null> => {
     throw error;
   }
 
-  return data as BlogPostData;
+  // Add formatted date and read time
+  const formattedData = {
+    ...data,
+    date: new Date(data.created_at).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    }),
+    readTime: '5 min read'
+  };
+
+  return formattedData as BlogPostData;
 };
 
 const formatDate = (dateString: string) => {
@@ -147,8 +159,8 @@ const BlogDetail = () => {
   }
 
   // Format date for display
-  const formattedDate = post ? formatDate(post.created_at) : displayPost.date;
-  const readTime = post ? "5 min read" : displayPost.readTime;
+  const formattedDate = post?.date || displayPost?.date || '';
+  const readTime = post?.readTime || displayPost?.readTime || '5 min read';
 
   return (
     <Layout>
@@ -185,7 +197,7 @@ const BlogDetail = () => {
             
             <div className="relative h-[400px] rounded-lg overflow-hidden mb-8">
               <img 
-                src={displayPost.image_url} 
+                src={post?.image_url || displayPost?.imageUrl}
                 alt={displayPost.title}
                 className="w-full h-full object-cover"
               />
@@ -195,11 +207,11 @@ const BlogDetail = () => {
               <div className="flex items-center">
                 <Avatar className="h-10 w-10 mr-3">
                   <AvatarFallback className="bg-university-blue text-white">
-                    {post?.author?.avatar_initials || displayPost.author?.avatarInitials}
+                    {post?.author?.avatar_initials || displayPost?.author?.avatarInitials}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-semibold">{post?.author?.name || displayPost.author?.name}</p>
+                  <p className="font-semibold">{post?.author?.name || displayPost?.author?.name}</p>
                   <div className="flex items-center text-sm text-gray-500">
                     <Calendar className="h-4 w-4 mr-1" />
                     <span>{formattedDate}</span>
