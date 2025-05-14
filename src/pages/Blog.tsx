@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
@@ -121,22 +122,29 @@ const fetchBlogPosts = async (): Promise<BlogPost[]> => {
   }
 
   // Transform data to match the BlogPost interface
-  return data.map(post => ({
-    id: post.id,
-    title: post.title,
-    excerpt: post.excerpt,
-    author: {
-      name: post.author?.[0]?.name || 'Unknown Author',
-      avatarInitials: post.author?.[0]?.avatar_initials || 'UA',
-    },
-    date: new Date(post.created_at).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }),
-    readTime: '5 min read', // Default read time
-    imageUrl: post.image_url,
-  }));
+  return data.map(post => {
+    // Check if author exists and has at least one entry
+    const authorData = post.author && Array.isArray(post.author) && post.author.length > 0 
+      ? post.author[0] 
+      : { name: 'Unknown Author', avatar_initials: 'UA' };
+    
+    return {
+      id: post.id,
+      title: post.title,
+      excerpt: post.excerpt,
+      author: {
+        name: authorData.name || 'Unknown Author',
+        avatarInitials: authorData.avatar_initials || 'UA',
+      },
+      date: new Date(post.created_at).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }),
+      readTime: '5 min read', // Default read time
+      imageUrl: post.image_url,
+    };
+  });
 };
 
 const Blog = () => {
