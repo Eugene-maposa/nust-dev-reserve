@@ -9,8 +9,8 @@ const Login = () => {
   return (
     <Layout>
       <PageHeader 
-        title="Login to Your Account" 
-        subtitle="Access the NUST Software Development Centre booking system"
+        title="Account Access" 
+        subtitle="Login to your existing account or register for a new one"
       />
       <div className="container mx-auto px-4 py-12">
         <Card className="max-w-md mx-auto">
