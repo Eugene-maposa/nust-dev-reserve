@@ -109,15 +109,7 @@ const fetchBlogPosts = async (): Promise<BlogPost[]> => {
   const { data, error } = await supabase
     .from('blog_posts')
     .select(`
-      id,
-      title,
-      excerpt,
-      content,
-      image_url,
-      created_at,
-      updated_at,
-      published,
-      author_id,
+      *,
       author:blog_authors(id, name, avatar_initials)
     `)
     .eq('published', true)
@@ -129,7 +121,7 @@ const fetchBlogPosts = async (): Promise<BlogPost[]> => {
   }
 
   // Transform data to match the BlogPost interface
-  return (data as unknown as SupabaseBlogPost[]).map(post => ({
+  return data.map(post => ({
     id: post.id,
     title: post.title,
     excerpt: post.excerpt,

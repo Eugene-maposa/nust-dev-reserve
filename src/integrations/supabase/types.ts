@@ -111,6 +111,36 @@ export type Database = {
         }
         Relationships: []
       }
+      password_reset_tokens: {
+        Row: {
+          created_at: string | null
+          expires_at: string
+          id: string
+          token: string
+          updated_at: string | null
+          used: boolean | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          token: string
+          updated_at?: string | null
+          used?: boolean | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          token?: string
+          updated_at?: string | null
+          used?: boolean | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       rooms: {
         Row: {
           capacity: number | null
@@ -144,6 +174,7 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          permissions: Json | null
           phone: string | null
           role: string
           student_number: string | null
@@ -154,6 +185,7 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          permissions?: Json | null
           phone?: string | null
           role?: string
           student_number?: string | null
@@ -164,6 +196,7 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          permissions?: Json | null
           phone?: string | null
           role?: string
           student_number?: string | null
@@ -191,7 +224,38 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      check_password_requirements: {
+        Args: { password: string }
+        Returns: boolean
+      }
+      check_user_permission: {
+        Args: { p_user_id: string; p_permission: string }
+        Returns: boolean
+      }
+      generate_password_reset_token: {
+        Args: { user_email: string }
+        Returns: string
+      }
+      reset_admin_password: {
+        Args: { admin_email?: string; new_password?: string }
+        Returns: undefined
+      }
+      update_password_with_validation: {
+        Args: { user_email: string; new_password: string }
+        Returns: boolean
+      }
+      update_user_password: {
+        Args: { user_email: string; new_password: string }
+        Returns: undefined
+      }
+      update_user_role: {
+        Args: { p_user_id: string; p_new_role: string; p_permissions?: Json }
+        Returns: undefined
+      }
+      validate_password_reset_token: {
+        Args: { p_token: string; p_new_password: string }
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

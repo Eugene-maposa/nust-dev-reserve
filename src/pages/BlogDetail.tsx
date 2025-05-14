@@ -211,7 +211,9 @@ const BlogDetail = () => {
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-semibold">{post?.author?.[0]?.name || (displayPost as any).author?.name}</p>
+                  <p className="font-semibold">
+                    {post?.author?.[0]?.name || (displayPost as any).author?.name}
+                  </p>
                   <div className="flex items-center text-sm text-gray-500">
                     <Calendar className="h-4 w-4 mr-1" />
                     <span>{formattedDate}</span>

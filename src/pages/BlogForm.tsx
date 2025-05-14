@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
@@ -142,7 +143,8 @@ const BlogForm = () => {
             title: values.title,
             excerpt: values.excerpt,
             content: values.content,
-            image_url: values.image_url
+            image_url: values.image_url,
+            updated_at: new Date().toISOString()
           })
           .eq('id', id!);
           
@@ -157,7 +159,9 @@ const BlogForm = () => {
             content: values.content,
             image_url: values.image_url,
             author_id: author.id,
-            published: true
+            published: true,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           })
           .select('id')
           .single();
