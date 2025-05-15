@@ -1,11 +1,11 @@
-import React, { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import PageHeader from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast';
-import { Calendar, Clock, LogOut, Search, Filter } from 'lucide-react';
+import { Calendar, Clock, LogOut, Search } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -22,14 +22,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-
-interface User {
-  email: string;
-  role: string;
-  permissions: {
-    canBook: boolean;
-  };
-}
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 
 interface Booking {
   id: string;
@@ -49,79 +44,81 @@ interface Resource {
 }
 
 const Dashboard = () => {
-  const navigate = useNavigate();
-  const { toast } = useToast();
-  const [user, setUser] = useState<User | null>(null);
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [resources, setResources] = useState<Resource[]>([]);
+  const { user, userRole, signOut } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showBookings, setShowBookings] = useState(false);
   const [showResources, setShowResources] = useState(false);
 
-  useEffect(() => {
-    const userStr = localStorage.getItem('user');
-    if (!userStr) {
-      toast({
-        title: "Access Denied",
-        description: "Please login to access the dashboard",
-        variant: "destructive",
-      });
-      navigate('/login');
-      return;
-    }
-
-    const userData = JSON.parse(userStr);
-    setUser(userData);
-
-    // In a real app, this would be an API call
-    // Mock data for demonstration
-    setBookings([
-      {
-        id: '1',
-        resource: 'Lab A - Workstation 12',
-        date: 'March 25, 2024',
-        time: '2:00 PM - 4:00 PM',
-        status: 'approved',
-        purpose: 'Project Development'
-      },
-      {
-        id: '2',
-        resource: 'Study Room B',
-        date: 'March 26, 2024',
-        time: '10:00 AM - 12:00 PM',
-        status: 'pending',
-        purpose: 'Research Meeting'
+  // Fetch user bookings using React Query
+  const { data: bookings = [], isLoading: isLoadingBookings } = useQuery({
+    queryKey: ['bookings', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from('bookings')
+        .select(`
+          id,
+          date,
+          time_slot,
+          status,
+          purpose,
+          room:rooms(id, name, type, status)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+        
+      if (error) {
+        throw new Error(error.message);
       }
-    ]);
+      
+      // Transform data to match the Booking interface
+      return data.map((booking: any) => ({
+        id: booking.id,
+        resource: booking.room?.name || 'Unknown',
+        date: new Date(booking.date).toLocaleDateString('en-US', {
+          year: 'numeric',
+          month: 'long',
+          day: 'numeric',
+        }),
+        time: booking.time_slot,
+        status: booking.status,
+        purpose: booking.purpose || 'N/A',
+      }));
+    },
+    enabled: !!user,
+  });
 
-    setResources([
-      {
-        id: '1',
-        name: 'Lab A - Workstation 12',
-        type: 'Workstation',
-        status: 'available'
-      },
-      {
-        id: '2',
-        name: 'Study Room B',
-        type: 'Room',
-        status: 'in-use',
-        capacity: 4
+  // Fetch available resources
+  const { data: resources = [], isLoading: isLoadingResources } = useQuery({
+    queryKey: ['resources'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('rooms')
+        .select('*');
+        
+      if (error) {
+        throw new Error(error.message);
       }
-    ]);
-  }, [navigate, toast]);
+      
+      return data.map((room: any) => ({
+        id: room.id,
+        name: room.name,
+        type: room.type,
+        status: room.status,
+        capacity: room.capacity,
+      }));
+    },
+  });
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    navigate('/login');
-  };
-
+  // Filter bookings based on search query and status
   const filteredBookings = bookings.filter(booking =>
     booking.resource.toLowerCase().includes(searchQuery.toLowerCase()) &&
     (filterStatus === 'all' || booking.status === filterStatus)
   );
 
+  // Filter resources based on search query and status
   const filteredResources = resources.filter(resource =>
     resource.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
     (filterStatus === 'all' || resource.status === filterStatus)
@@ -130,7 +127,7 @@ const Dashboard = () => {
   return (
     <Layout>
       <PageHeader 
-        title="User Dashboard" 
+        title={`${userRole?.charAt(0).toUpperCase()}${userRole?.slice(1) || 'User'} Dashboard`} 
         subtitle="Manage your bookings and resources"
       />
       
@@ -140,7 +137,7 @@ const Dashboard = () => {
             <h2 className="text-2xl font-bold">Welcome, {user?.email}</h2>
             <p className="text-muted-foreground">Manage your bookings and resources</p>
           </div>
-          <Button variant="outline" onClick={handleLogout}>
+          <Button variant="outline" onClick={() => signOut()}>
             <LogOut className="h-4 w-4 mr-2" /> Logout
           </Button>
         </div>
@@ -167,7 +164,10 @@ const Dashboard = () => {
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">24</div>
+              <div className="text-2xl font-bold">
+                {/* Calculate total booked hours - simplified for now */}
+                {bookings.filter(b => b.status === 'approved').length * 2}
+              </div>
               <p className="text-xs text-muted-foreground">
                 Hours booked this month
               </p>
@@ -215,6 +215,15 @@ const Dashboard = () => {
               >
                 {showResources ? 'Hide Available Resources' : 'View Available Resources'}
               </Button>
+              
+              {/* Admin-only actions */}
+              {userRole === 'admin' && (
+                <Link to="/admin">
+                  <Button variant="outline" className="w-full bg-university-gold text-university-blue hover:bg-university-gold/90">
+                    Admin Dashboard
+                  </Button>
+                </Link>
+              )}
             </CardContent>
           </Card>
 
@@ -376,4 +385,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard; 
+export default Dashboard;

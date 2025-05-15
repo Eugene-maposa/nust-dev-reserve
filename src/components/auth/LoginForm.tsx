@@ -6,6 +6,7 @@ import { Separator } from '@/components/ui/separator';
 // Import components
 import EmailLoginForm from '@/components/auth/components/EmailLoginForm';
 import CardScannerForm from '@/components/auth/components/CardScannerForm';
+import { DEV_MODE } from '@/components/auth/config/constants';
 
 const LoginForm = () => {
   return (
