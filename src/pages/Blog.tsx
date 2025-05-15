@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Search, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/use-toast';
 
 // Fallback static blog posts data (used if Supabase fetch fails)
 export const blogPosts: BlogPost[] = [
@@ -102,7 +102,7 @@ export interface SupabaseBlogPost {
     id: string;
     name: string;
     avatar_initials: string;
-  }[];
+  };
 }
 
 // Function to fetch blog posts from Supabase
@@ -122,11 +122,9 @@ const fetchBlogPosts = async (): Promise<BlogPost[]> => {
   }
 
   // Transform data to match the BlogPost interface
-  return data.map(post => {
-    // Check if author exists and has at least one entry
-    const authorData = post.author && Array.isArray(post.author) && post.author.length > 0 
-      ? post.author[0] 
-      : { name: 'Unknown Author', avatar_initials: 'UA' };
+  return (data as SupabaseBlogPost[]).map(post => {
+    // Safely handle author data
+    const authorData = post.author || { name: 'Unknown Author', avatar_initials: 'UA' };
     
     return {
       id: post.id,
@@ -164,8 +162,10 @@ const Blog = () => {
   // Show error toast if fetch fails
   React.useEffect(() => {
     if (error) {
-      toast.error('Failed to fetch blog posts', {
-        description: 'Using fallback data instead.'
+      toast({
+        title: "Failed to fetch blog posts",
+        description: "Using fallback data instead.",
+        variant: "destructive",
       });
     }
   }, [error]);
@@ -196,7 +196,7 @@ const Blog = () => {
             />
           </div>
           <Link to="/blog/create">
-            <Button className="w-full md:w-auto">
+            <Button className="w-full md:w-auto bg-university-blue hover:bg-university-blue/90">
               <Plus className="h-4 w-4 mr-2" />
               Create Post
             </Button>
@@ -207,14 +207,14 @@ const Blog = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[1, 2, 3].map((i) => (
               <div key={i} className="animate-pulse">
-                <div className="h-48 bg-gray-200 rounded mb-4"></div>
-                <div className="h-6 bg-gray-200 rounded w-3/4 mb-2"></div>
-                <div className="h-4 bg-gray-200 rounded w-1/2 mb-4"></div>
-                <div className="h-4 bg-gray-200 rounded mb-1"></div>
-                <div className="h-4 bg-gray-200 rounded w-5/6 mb-4"></div>
+                <div className="h-48 bg-gray-200 rounded-lg mb-4"></div>
+                <div className="h-6 bg-gray-200 rounded-lg w-3/4 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded-lg w-1/2 mb-4"></div>
+                <div className="h-4 bg-gray-200 rounded-lg mb-1"></div>
+                <div className="h-4 bg-gray-200 rounded-lg w-5/6 mb-4"></div>
                 <div className="flex justify-between">
                   <div className="h-6 bg-gray-200 rounded-full w-6"></div>
-                  <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+                  <div className="h-4 bg-gray-200 rounded-lg w-1/4"></div>
                 </div>
               </div>
             ))}
@@ -226,13 +226,13 @@ const Blog = () => {
             ))}
           </div>
         ) : (
-          <div className="col-span-3 text-center py-12">
+          <div className="text-center py-12 bg-gray-50 rounded-lg">
             <h3 className="text-xl font-semibold mb-2">No posts found</h3>
-            <p className="text-gray-600">
+            <p className="text-gray-600 mb-4">
               Try adjusting your search terms or browse all posts.
             </p>
             <Button 
-              className="mt-4"
+              className="mt-4 bg-university-blue hover:bg-university-blue/90"
               variant="outline"
               onClick={() => setSearchTerm('')}
             >
