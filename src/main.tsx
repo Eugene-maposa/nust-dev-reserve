@@ -1,4 +1,5 @@
 
+import React from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.tsx'
 import './index.css'
@@ -22,7 +23,7 @@ if (!container) {
   // Initialize the app
   try {
     const root = createRoot(container);
-    root.render(<App />);
+    root.render(<React.StrictMode><App /></React.StrictMode>);
     console.log("Application successfully initialized");
   } catch (error) {
     logError(error, "Application Rendering");

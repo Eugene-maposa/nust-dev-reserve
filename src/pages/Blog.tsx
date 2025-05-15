@@ -102,7 +102,7 @@ export interface SupabaseBlogPost {
     id: string;
     name: string;
     avatar_initials: string;
-  };
+  } | null;
 }
 
 // Function to fetch blog posts from Supabase
@@ -110,7 +110,7 @@ const fetchBlogPosts = async (): Promise<BlogPost[]> => {
   const { data, error } = await supabase
     .from('blog_posts')
     .select(`
-      *,
+      id, title, excerpt, content, image_url, created_at, updated_at, published, author_id,
       author:blog_authors(id, name, avatar_initials)
     `)
     .eq('published', true)
@@ -122,7 +122,7 @@ const fetchBlogPosts = async (): Promise<BlogPost[]> => {
   }
 
   // Transform data to match the BlogPost interface
-  return (data as SupabaseBlogPost[]).map(post => {
+  return (data as unknown as SupabaseBlogPost[]).map(post => {
     // Safely handle author data
     const authorData = post.author || { name: 'Unknown Author', avatar_initials: 'UA' };
     
@@ -131,8 +131,8 @@ const fetchBlogPosts = async (): Promise<BlogPost[]> => {
       title: post.title,
       excerpt: post.excerpt,
       author: {
-        name: authorData.name || 'Unknown Author',
-        avatarInitials: authorData.avatar_initials || 'UA',
+        name: typeof authorData === 'string' ? 'Unknown Author' : authorData.name || 'Unknown Author',
+        avatarInitials: typeof authorData === 'string' ? 'UA' : authorData.avatar_initials || 'UA',
       },
       date: new Date(post.created_at).toLocaleDateString('en-US', {
         year: 'numeric',
