@@ -40,9 +40,11 @@ const AppRoutes = () => (
     <Route path="/about" element={<About />} />
     <Route path="/unauthorized" element={<Unauthorized />} />
     
-    {/* Public pages with some content that might change based on auth */}
+    {/* Public blog routes - no authentication required */}
     <Route path="/blog" element={<Blog />} />
     <Route path="/blog/:id" element={<BlogDetail />} />
+    <Route path="/blog/create" element={<BlogForm />} />
+    <Route path="/blog/edit/:id" element={<BlogForm />} />
     
     {/* Protected routes for any authenticated user */}
     <Route path="/bookings" element={
@@ -65,16 +67,6 @@ const AppRoutes = () => (
     <Route path="/admin" element={
       <ProtectedRoute requiredRole="admin">
         <Admin />
-      </ProtectedRoute>
-    } />
-    <Route path="/blog/create" element={
-      <ProtectedRoute requiredRole="admin">
-        <BlogForm />
-      </ProtectedRoute>
-    } />
-    <Route path="/blog/edit/:id" element={
-      <ProtectedRoute requiredRole="admin">
-        <BlogForm />
       </ProtectedRoute>
     } />
     

@@ -29,38 +29,22 @@ const formSchema = z.object({
   image_url: z.string().url({
     message: 'Please enter a valid URL.',
   }),
+  author_name: z.string().min(2, {
+    message: 'Author name must be at least 2 characters.',
+  }),
 });
 
 // Define the form values type based on the schema
 type FormValues = z.infer<typeof formSchema>;
 
-interface AuthorProfile {
-  id: string;
-  name: string;
-  avatar_initials: string;
-}
-
-// Function to fetch the author profile
-const fetchAuthorProfile = async (): Promise<AuthorProfile> => {
-  const { data, error } = await supabase
-    .from('blog_authors')
-    .select('*')
-    .limit(1)
-    .single();
-
-  if (error) {
-    console.error('Error fetching author profile:', error);
-    throw error;
-  }
-
-  return data as AuthorProfile;
-};
-
 // Function to fetch a single blog post for editing
 const fetchPost = async (id: string) => {
   const { data, error } = await supabase
     .from('blog_posts')
-    .select('*')
+    .select(`
+      *,
+      author:blog_authors(name, avatar_initials)
+    `)
     .eq('id', id)
     .single();
 
@@ -78,22 +62,6 @@ const BlogForm = () => {
   const { id } = useParams();
   const isEditing = !!id;
   const queryClient = useQueryClient();
-  
-  // Fetch author profile for the user
-  const { data: author } = useQuery({
-    queryKey: ['authorProfile'],
-    queryFn: fetchAuthorProfile,
-    retry: 1,
-    meta: {
-      onSettled: (data: any, error: Error | null) => {
-        if (error) {
-          console.error('Error fetching author profile:', error);
-          toast.error('You need to be logged in to create or edit blog posts');
-          navigate('/login');
-        }
-      }
-    }
-  });
 
   // Fetch blog post data if editing
   const { data: post } = useQuery({
@@ -116,10 +84,11 @@ const BlogForm = () => {
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      title: post?.title || '',
-      excerpt: post?.excerpt || '',
-      content: post?.content || '',
-      image_url: post?.image_url || '',
+      title: '',
+      excerpt: '',
+      content: '',
+      image_url: '',
+      author_name: '',
     },
     mode: 'onChange',
   });
@@ -127,16 +96,21 @@ const BlogForm = () => {
   React.useEffect(() => {
     setIsMounted(true);
     if (post) {
-      form.reset(post);
+      form.reset({
+        title: post.title,
+        excerpt: post.excerpt,
+        content: post.content,
+        image_url: post.image_url,
+        author_name: post.author?.[0]?.name || '',
+      });
     }
   }, [post, form]);
 
   // Create or update blog post
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
-      if (!author) throw new Error('No author profile found');
-      
       if (isEditing) {
+        // Update existing post
         const { error } = await supabase
           .from('blog_posts')
           .update({
@@ -149,8 +123,33 @@ const BlogForm = () => {
           .eq('id', id!);
           
         if (error) throw error;
+        
+        // Update author info if needed
+        if (post?.author_id) {
+          await supabase
+            .from('blog_authors')
+            .update({
+              name: values.author_name,
+              avatar_initials: values.author_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+            })
+            .eq('id', post.author_id);
+        }
+        
         return id;
       } else {
+        // Create new author first
+        const { data: authorData, error: authorError } = await supabase
+          .from('blog_authors')
+          .insert({
+            name: values.author_name,
+            avatar_initials: values.author_name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+          })
+          .select('id')
+          .single();
+          
+        if (authorError) throw authorError;
+        
+        // Create new post
         const { data, error } = await supabase
           .from('blog_posts')
           .insert({
@@ -158,7 +157,7 @@ const BlogForm = () => {
             excerpt: values.excerpt,
             content: values.content,
             image_url: values.image_url,
-            author_id: author.id,
+            author_id: authorData.id,
             published: true,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
@@ -206,6 +205,19 @@ const BlogForm = () => {
                       <FormLabel>Title</FormLabel>
                       <FormControl>
                         <Input placeholder="My Awesome Blog Post" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="author_name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Author Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="John Doe" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
