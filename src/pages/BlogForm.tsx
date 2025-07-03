@@ -101,7 +101,7 @@ const BlogForm = () => {
         excerpt: post.excerpt,
         content: post.content,
         image_url: post.image_url,
-        author_name: post.author?.[0]?.name || '',
+        author_name: post.author?.name || '',
       });
     }
   }, [post, form]);
