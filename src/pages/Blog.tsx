@@ -1,9 +1,9 @@
-
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
 import PageHeader from '@/components/ui/PageHeader';
 import BlogCard, { BlogPost } from '@/components/blog/BlogCard';
+import BlogPagination from '@/components/blog/BlogPagination';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Search, Plus } from 'lucide-react';
@@ -105,16 +105,25 @@ export interface SupabaseBlogPost {
   } | null;
 }
 
-// Function to fetch blog posts from Supabase
-const fetchBlogPosts = async (): Promise<BlogPost[]> => {
-  const { data, error } = await supabase
+// Function to fetch blog posts from Supabase with pagination
+const fetchBlogPosts = async (page: number, searchTerm: string): Promise<{ posts: BlogPost[], totalCount: number }> => {
+  const offset = (page - 1) * POSTS_PER_PAGE;
+  
+  let query = supabase
     .from('blog_posts')
     .select(`
       id, title, excerpt, content, image_url, created_at, updated_at, published, author_id,
       author:blog_authors(id, name, avatar_initials)
-    `)
+    `, { count: 'exact' })
     .eq('published', true)
-    .order('created_at', { ascending: false });
+    .order('created_at', { ascending: false })
+    .range(offset, offset + POSTS_PER_PAGE - 1);
+
+  if (searchTerm) {
+    query = query.or(`title.ilike.%${searchTerm}%,excerpt.ilike.%${searchTerm}%`);
+  }
+
+  const { data, error, count } = await query;
 
   if (error) {
     console.error('Error fetching blog posts:', error);
@@ -122,7 +131,7 @@ const fetchBlogPosts = async (): Promise<BlogPost[]> => {
   }
 
   // Transform data to match the BlogPost interface
-  return (data as unknown as SupabaseBlogPost[]).map(post => {
+  const posts = (data as unknown as SupabaseBlogPost[]).map(post => {
     // Safely handle author data
     const authorData = post.author || { name: 'Unknown Author', avatar_initials: 'UA' };
     
@@ -143,21 +152,37 @@ const fetchBlogPosts = async (): Promise<BlogPost[]> => {
       imageUrl: post.image_url,
     };
   });
+
+  return { posts, totalCount: count || 0 };
 };
+
+const POSTS_PER_PAGE = 6;
 
 const Blog = () => {
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
 
-  // Fetch blog posts using React Query
-  const { data: supabasePosts, isLoading, error } = useQuery({
-    queryKey: ['blogPosts'],
-    queryFn: fetchBlogPosts,
+  // Fetch blog posts using React Query with pagination
+  const { data, isLoading, error } = useQuery({
+    queryKey: ['blogPosts', currentPage, searchTerm],
+    queryFn: () => fetchBlogPosts(currentPage, searchTerm),
     retry: 1,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 
-  // If Supabase fetch fails, use the static blog posts data
-  const posts = supabasePosts || blogPosts;
+  const posts = data?.posts || [];
+  const totalCount = data?.totalCount || 0;
+  const totalPages = Math.ceil(totalCount / POSTS_PER_PAGE);
+
+  // Fallback to static data if Supabase fails
+  const fallbackPosts = searchTerm
+    ? blogPosts.filter(post => 
+        post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        post.excerpt.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : blogPosts;
+
+  const displayPosts = posts.length > 0 ? posts : fallbackPosts;
   
   // Show error toast if fetch fails
   React.useEffect(() => {
@@ -169,13 +194,16 @@ const Blog = () => {
       });
     }
   }, [error]);
-  
-  const filteredPosts = searchTerm
-    ? posts.filter(post => 
-        post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        post.excerpt.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : posts;
+
+  // Reset to page 1 when search term changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
     <Layout>
@@ -205,7 +233,7 @@ const Blog = () => {
         
         {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="animate-pulse">
                 <div className="h-48 bg-gray-200 rounded-lg mb-4"></div>
                 <div className="h-6 bg-gray-200 rounded-lg w-3/4 mb-2"></div>
@@ -219,12 +247,23 @@ const Blog = () => {
               </div>
             ))}
           </div>
-        ) : filteredPosts.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filteredPosts.map((post) => (
-              <BlogCard key={post.id} post={post} />
-            ))}
-          </div>
+        ) : displayPosts.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {displayPosts.map((post) => (
+                <BlogCard key={post.id} post={post} />
+              ))}
+            </div>
+            
+            {/* Only show pagination for Supabase data (not fallback) */}
+            {posts.length > 0 && totalPages > 1 && (
+              <BlogPagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
+            )}
+          </>
         ) : (
           <div className="text-center py-12 bg-gray-50 rounded-lg">
             <h3 className="text-xl font-semibold mb-2">No posts found</h3>
@@ -238,6 +277,13 @@ const Blog = () => {
             >
               Clear Search
             </Button>
+          </div>
+        )}
+
+        {/* Show total count */}
+        {posts.length > 0 && (
+          <div className="text-center mt-6 text-gray-600">
+            Showing {Math.min(currentPage * POSTS_PER_PAGE, totalCount)} of {totalCount} posts
           </div>
         )}
       </div>
