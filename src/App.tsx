@@ -62,10 +62,8 @@ const AppRoutes = () => (
         <Dashboard />
       </ProtectedRoute>
     } />
-    
-    {/* Admin-only routes */}
     <Route path="/admin" element={
-      <ProtectedRoute requiredRole="admin">
+      <ProtectedRoute>
         <Admin />
       </ProtectedRoute>
     } />

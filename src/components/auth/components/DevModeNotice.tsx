@@ -3,21 +3,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
-interface DevModeNoticeProps {
-  users: Array<{
-    email: string;
-    password: string;
-    role: string;
-    permissions: {
-      canBook: boolean;
-      canManageBookings: boolean;
-      canManageUsers: boolean;
-      canManageResources: boolean;
-    };
-  }>;
-}
-
-const DevModeNotice: React.FC<DevModeNoticeProps> = ({ users }) => {
+const DevModeNotice: React.FC = () => {
   const navigate = useNavigate();
 
   return (
@@ -29,34 +15,9 @@ const DevModeNotice: React.FC<DevModeNoticeProps> = ({ users }) => {
           size="sm"
           variant="outline"
           className="text-xs flex-1"
-          onClick={() => {
-            const adminUser = users[0];
-            localStorage.setItem('user', JSON.stringify({
-              email: adminUser.email,
-              role: adminUser.role,
-              permissions: adminUser.permissions
-            }));
-            navigate('/admin');
-          }}
+          onClick={() => navigate('/dashboard')}
         >
-          Bypass as Admin
-        </Button>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline" 
-          className="text-xs flex-1"
-          onClick={() => {
-            const lecturerUser = users[1];
-            localStorage.setItem('user', JSON.stringify({
-              email: lecturerUser.email,
-              role: lecturerUser.role,
-              permissions: lecturerUser.permissions
-            }));
-            navigate('/dashboard');
-          }}
-        >
-          Bypass as Lecturer
+          Go to Dashboard
         </Button>
       </div>
     </div>

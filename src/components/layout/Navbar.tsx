@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { user, signOut, isAdmin } = useAuth();
+  const { user, signOut } = useAuth();
 
   return (
     <nav className="bg-university-blue text-white shadow-md">
@@ -35,12 +35,6 @@ const Navbar = () => {
             <Link to="/blog" className="flex items-center px-3 py-2 rounded-md hover:bg-university-blue/80 transition-colors">
               <FileText className="mr-2 h-4 w-4" /> Blog
             </Link>
-            
-            {isAdmin && (
-              <Link to="/admin" className="flex items-center px-3 py-2 rounded-md hover:bg-university-blue/80 transition-colors">
-                Admin
-              </Link>
-            )}
             
             <div className="ml-4">
               {user ? (
@@ -111,16 +105,6 @@ const Navbar = () => {
             >
               <FileText className="inline mr-2 h-4 w-4" /> Blog
             </Link>
-            
-            {isAdmin && (
-              <Link 
-                to="/admin" 
-                className="block px-3 py-2 rounded-md hover:bg-university-blue/80 transition-colors"
-                onClick={() => setIsOpen(false)}
-              >
-                Admin
-              </Link>
-            )}
             
             {user ? (
               <button 

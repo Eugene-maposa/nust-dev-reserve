@@ -43,7 +43,7 @@ const fetchPost = async (id: string) => {
     .from('blog_posts')
     .select(`
       *,
-      blog_authors!inner(
+      blog_authors (
         id,
         name,
         avatar_initials

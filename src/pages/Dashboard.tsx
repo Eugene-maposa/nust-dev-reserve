@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -44,7 +43,7 @@ interface Resource {
 }
 
 const Dashboard = () => {
-  const { user, userRole, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showBookings, setShowBookings] = useState(false);
@@ -127,7 +126,7 @@ const Dashboard = () => {
   return (
     <Layout>
       <PageHeader 
-        title={`${userRole?.charAt(0).toUpperCase()}${userRole?.slice(1) || 'User'} Dashboard`} 
+        title="Dashboard" 
         subtitle="Manage your bookings and resources"
       />
       
@@ -165,7 +164,6 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {/* Calculate total booked hours - simplified for now */}
                 {bookings.filter(b => b.status === 'approved').length * 2}
               </div>
               <p className="text-xs text-muted-foreground">
@@ -215,15 +213,6 @@ const Dashboard = () => {
               >
                 {showResources ? 'Hide Available Resources' : 'View Available Resources'}
               </Button>
-              
-              {/* Admin-only actions */}
-              {userRole === 'admin' && (
-                <Link to="/admin">
-                  <Button variant="outline" className="w-full bg-university-gold text-university-blue hover:bg-university-gold/90">
-                    Admin Dashboard
-                  </Button>
-                </Link>
-              )}
             </CardContent>
           </Card>
 
