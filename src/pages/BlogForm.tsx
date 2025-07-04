@@ -43,7 +43,11 @@ const fetchPost = async (id: string) => {
     .from('blog_posts')
     .select(`
       *,
-      author:blog_authors(name, avatar_initials)
+      blog_authors!inner(
+        id,
+        name,
+        avatar_initials
+      )
     `)
     .eq('id', id)
     .single();
@@ -101,7 +105,7 @@ const BlogForm = () => {
         excerpt: post.excerpt,
         content: post.content,
         image_url: post.image_url,
-        author_name: post.author?.name || '',
+        author_name: post.blog_authors?.name || '',
       });
     }
   }, [post, form]);
