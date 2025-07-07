@@ -6,8 +6,6 @@ CREATE TABLE IF NOT EXISTS public.user_profiles (
   full_name TEXT,
   student_number TEXT,
   phone TEXT,
-  role TEXT NOT NULL DEFAULT 'student',
-  permissions JSONB DEFAULT '{}'::jsonb,
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
   updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
@@ -70,12 +68,6 @@ CREATE TABLE IF NOT EXISTS public.password_reset_tokens (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT now()
 );
 
--- Create USERS table (if it doesn't exist)
-CREATE TABLE IF NOT EXISTS public.USERS (
-  id BIGINT NOT NULL PRIMARY KEY,
-  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
-);
-
 -- Enable Row Level Security on all tables
 ALTER TABLE public.user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.rooms ENABLE ROW LEVEL SECURITY;
@@ -84,35 +76,34 @@ ALTER TABLE public.blog_authors ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.blog_posts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.password_reset_tokens ENABLE ROW LEVEL SECURITY;
 
--- Drop existing policies if they exist and recreate them
+-- Drop all existing policies to avoid conflicts
 DROP POLICY IF EXISTS "Allow public read access to user_profiles" ON public.user_profiles;
 DROP POLICY IF EXISTS "Users can view their own profiles" ON public.user_profiles;
 DROP POLICY IF EXISTS "Users can update their own profiles" ON public.user_profiles;
 DROP POLICY IF EXISTS "Admins can view all profiles" ON public.user_profiles;
+DROP POLICY IF EXISTS "Admins can manage all profiles" ON public.user_profiles;
 
--- Create RLS policies for user_profiles
+-- Create simple RLS policies for user_profiles (no recursive queries)
 CREATE POLICY "Allow public read access to user_profiles" ON public.user_profiles FOR SELECT USING (true);
-CREATE POLICY "Users can view their own profiles" ON public.user_profiles FOR SELECT USING (auth.uid() = id);
-CREATE POLICY "Users can update their own profiles" ON public.user_profiles FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Admins can view all profiles" ON public.user_profiles FOR ALL USING ((SELECT role FROM user_profiles WHERE id = auth.uid()) = 'admin');
+CREATE POLICY "Users can update own profile" ON public.user_profiles FOR UPDATE USING (auth.uid() = id);
 
 -- Drop and recreate RLS policies for rooms
 DROP POLICY IF EXISTS "Anyone can view rooms" ON public.rooms;
 DROP POLICY IF EXISTS "Only admins can modify rooms" ON public.rooms;
+DROP POLICY IF EXISTS "Everyone can view rooms" ON public.rooms;
 
 CREATE POLICY "Anyone can view rooms" ON public.rooms FOR SELECT USING (true);
-CREATE POLICY "Only admins can modify rooms" ON public.rooms FOR ALL USING ((SELECT role FROM user_profiles WHERE id = auth.uid()) = 'admin');
 
 -- Drop and recreate RLS policies for bookings
 DROP POLICY IF EXISTS "Users can view their own bookings" ON public.bookings;
 DROP POLICY IF EXISTS "Users can create their own bookings" ON public.bookings;
 DROP POLICY IF EXISTS "Users can update their own bookings" ON public.bookings;
+DROP POLICY IF EXISTS "Users can insert their own bookings" ON public.bookings;
 DROP POLICY IF EXISTS "Admins can view all bookings" ON public.bookings;
 
 CREATE POLICY "Users can view their own bookings" ON public.bookings FOR SELECT USING (auth.uid() = user_id);
 CREATE POLICY "Users can create their own bookings" ON public.bookings FOR INSERT WITH CHECK (auth.uid() = user_id);
 CREATE POLICY "Users can update their own bookings" ON public.bookings FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY "Admins can view all bookings" ON public.bookings FOR ALL USING ((SELECT role FROM user_profiles WHERE id = auth.uid()) = 'admin');
 
 -- Drop and recreate RLS policies for blog_authors
 DROP POLICY IF EXISTS "Anyone can view blog authors" ON public.blog_authors;
@@ -120,12 +111,12 @@ DROP POLICY IF EXISTS "Users can create their own author profile" ON public.blog
 DROP POLICY IF EXISTS "Authors can update their own profile" ON public.blog_authors;
 DROP POLICY IF EXISTS "Authors can delete their own profile" ON public.blog_authors;
 DROP POLICY IF EXISTS "Only admins can modify blog authors" ON public.blog_authors;
+DROP POLICY IF EXISTS "Anyone can read author profiles" ON public.blog_authors;
 
 CREATE POLICY "Anyone can view blog authors" ON public.blog_authors FOR SELECT USING (true);
 CREATE POLICY "Users can create their own author profile" ON public.blog_authors FOR INSERT WITH CHECK (user_id = auth.uid());
 CREATE POLICY "Authors can update their own profile" ON public.blog_authors FOR UPDATE USING (user_id = auth.uid());
 CREATE POLICY "Authors can delete their own profile" ON public.blog_authors FOR DELETE USING (user_id = auth.uid());
-CREATE POLICY "Only admins can modify blog authors" ON public.blog_authors FOR ALL USING ((SELECT role FROM user_profiles WHERE id = auth.uid()) = 'admin');
 
 -- Drop and recreate RLS policies for blog_posts
 DROP POLICY IF EXISTS "Anyone can view published blog posts" ON public.blog_posts;
@@ -134,13 +125,10 @@ DROP POLICY IF EXISTS "Authenticated users can create blog posts" ON public.blog
 DROP POLICY IF EXISTS "Authors can update their own blog posts" ON public.blog_posts;
 DROP POLICY IF EXISTS "Authors can delete their own blog posts" ON public.blog_posts;
 DROP POLICY IF EXISTS "Authors can modify their own posts" ON public.blog_posts;
+DROP POLICY IF EXISTS "Anyone can read published blog posts" ON public.blog_posts;
 
 CREATE POLICY "Anyone can view published blog posts" ON public.blog_posts FOR SELECT USING (published = true);
 CREATE POLICY "Authors can view their own posts" ON public.blog_posts FOR SELECT USING ((SELECT user_id FROM blog_authors WHERE id = author_id) = auth.uid());
-CREATE POLICY "Authenticated users can create blog posts" ON public.blog_posts FOR INSERT WITH CHECK (author_id = auth.uid());
-CREATE POLICY "Authors can update their own blog posts" ON public.blog_posts FOR UPDATE USING (author_id = auth.uid());
-CREATE POLICY "Authors can delete their own blog posts" ON public.blog_posts FOR DELETE USING (author_id = auth.uid());
-CREATE POLICY "Authors can modify their own posts" ON public.blog_posts FOR ALL USING ((SELECT user_id FROM blog_authors WHERE id = author_id) = auth.uid());
 
 -- Drop and recreate RLS policies for password_reset_tokens
 DROP POLICY IF EXISTS "Users can view their own reset tokens" ON public.password_reset_tokens;
@@ -189,51 +177,16 @@ BEGIN
 END;
 $$;
 
-CREATE OR REPLACE FUNCTION public.update_user_role(p_user_id uuid, p_new_role character varying, p_permissions jsonb DEFAULT NULL::jsonb)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-AS $$
-BEGIN
-    IF p_new_role NOT IN ('admin', 'lecturer', 'student', 'staff', 'security') THEN
-        RAISE EXCEPTION 'Invalid role';
-    END IF;
-    
-    UPDATE user_profiles
-    SET 
-        role = p_new_role,
-        permissions = COALESCE(p_permissions, permissions)
-    WHERE id = p_user_id;
-END;
-$$;
-
 CREATE OR REPLACE FUNCTION public.check_user_permission(p_user_id uuid, p_permission text)
 RETURNS boolean
 LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 DECLARE
-    v_role VARCHAR;
     v_has_permission BOOLEAN;
 BEGIN
-    SELECT role INTO v_role
-    FROM user_profiles
-    WHERE id = p_user_id;
-    
-    CASE v_role
-        WHEN 'admin' THEN
-            v_has_permission := TRUE;
-        WHEN 'lecturer' THEN
-            v_has_permission := p_permission IN ('can_book', 'can_view_bookings');
-        WHEN 'student' THEN
-            v_has_permission := p_permission IN ('can_book', 'can_view_own_bookings');
-        WHEN 'staff' THEN
-            v_has_permission := p_permission IN ('can_book', 'can_view_bookings', 'can_manage_resources');
-        WHEN 'security' THEN
-            v_has_permission := p_permission IN ('can_view_bookings', 'can_verify_bookings');
-        ELSE
-            v_has_permission := FALSE;
-    END CASE;
+    -- Simple permission check without role-based complexity
+    v_has_permission := p_permission IN ('can_book', 'can_view_bookings', 'can_view_own_bookings');
     
     RETURN v_has_permission;
 END;
@@ -313,12 +266,11 @@ LANGUAGE plpgsql
 SECURITY DEFINER
 AS $$
 BEGIN
-    INSERT INTO public.user_profiles (id, email, full_name, role)
+    INSERT INTO public.user_profiles (id, email, full_name)
     VALUES (
         NEW.id,
         NEW.email,
-        NEW.raw_user_meta_data->>'full_name',
-        COALESCE(NEW.raw_user_meta_data->>'role', 'student')
+        NEW.raw_user_meta_data->>'full_name'
     );
     RETURN NEW;
 END;
