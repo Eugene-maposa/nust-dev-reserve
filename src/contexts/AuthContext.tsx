@@ -37,6 +37,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Set up auth state listener FIRST (to prevent missing auth events)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, currentSession) => {
+        console.log('Auth state changed:', event, currentSession?.user?.email);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
@@ -71,6 +72,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setIsLoading(true);
       try {
         const { data: { session: currentSession } } = await supabase.auth.getSession();
+        console.log('Initial session check:', currentSession?.user?.email);
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
         
@@ -92,31 +94,49 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [toast]);
 
-  // Fetch user profile to determine role
+  // Fetch user profile to determine role (simplified approach)
   const fetchUserProfile = async (userId: string) => {
     try {
+      console.log('Fetching profile for user:', userId);
+      
+      // Try to fetch the user profile - this should work with the simplified RLS
       const { data: profile, error } = await supabase
         .from('user_profiles')
         .select('role, permissions')
         .eq('id', userId)
-        .single();
+        .maybeSingle(); // Use maybeSingle to avoid errors if no profile exists
 
       if (error) {
         console.error('Error fetching user profile:', error);
+        // Set default role if we can't fetch the profile
+        setUserRole('user');
+        setIsAdmin(false);
         return;
       }
 
-      setUserRole(profile?.role || null);
-      setIsAdmin(profile?.role === 'admin');
+      if (profile) {
+        console.log('Profile fetched successfully:', profile);
+        setUserRole(profile.role || 'user');
+        setIsAdmin(profile.role === 'admin');
+      } else {
+        console.log('No profile found, setting default role');
+        // No profile exists yet, set default role
+        setUserRole('user');
+        setIsAdmin(false);
+      }
       
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
+      // Fallback to default role
+      setUserRole('user');
+      setIsAdmin(false);
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
       const result = await supabase.auth.signInWithPassword({ email, password });
+      console.log('Sign in result:', result);
       return result;
     } catch (error) {
       console.error('Sign in error:', error);
@@ -126,7 +146,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string) => {
     try {
-      const result = await supabase.auth.signUp({ email, password });
+      const result = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/`
+        }
+      });
+      console.log('Sign up result:', result);
       return result;
     } catch (error) {
       console.error('Sign up error:', error);

@@ -249,10 +249,6 @@ export type Database = {
         Args: { user_email: string }
         Returns: string
       }
-      get_current_user_role: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
       reset_admin_password: {
         Args: { admin_email?: string; new_password?: string }
         Returns: undefined

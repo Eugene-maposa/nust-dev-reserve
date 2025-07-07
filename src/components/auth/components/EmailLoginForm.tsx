@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -6,7 +5,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Mail, Lock, Loader2, Eye, EyeOff, UserPlus } from 'lucide-react';
-import { DEV_MODE } from '@/components/auth/config/constants';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -26,7 +24,9 @@ interface EmailLoginFormProps {
 
 const EmailLoginForm: React.FC<EmailLoginFormProps> = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+  const { signIn, signUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,47 +40,29 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = () => {
     setIsLoading(true);
 
     try {
-      // Sign in with Supabase auth
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
+      console.log('Attempting login for:', email);
+      
+      const { data, error } = await signIn(email, password);
 
       if (error) {
         throw error;
       }
 
-      // Get user profile info from user_profiles
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('role, permissions')
-        .eq('id', data.user?.id)
-        .single();
-
-      if (profileError) {
-        throw profileError;
+      if (!data.user) {
+        throw new Error('No user data returned');
       }
 
-      // Store user data in localStorage
-      localStorage.setItem('user', JSON.stringify({
-        email: data.user.email,
-        role: profileData.role,
-        permissions: profileData.permissions
-      }));
+      console.log('Login successful for:', data.user.email);
 
       toast({
         title: "Login successful",
-        description: profileData.role === 'admin' 
-          ? "Welcome to NUST SDC Admin Dashboard"
-          : "Welcome to NUST SDC Booking System",
+        description: "Welcome to NUST SDC!",
       });
 
-      // Navigate based on role
-      if (profileData.role === 'admin') {
-        navigate('/admin');
-      } else {
-        navigate('/dashboard');
-      }
+      // Navigate to the intended page or dashboard
+      const from = location.state?.from?.pathname || '/dashboard';
+      navigate(from, { replace: true });
+      
     } catch (error: any) {
       console.error('Login error:', error);
       toast({
@@ -121,11 +103,9 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = () => {
     }
 
     try {
-      // Sign up with Supabase auth
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password
-      });
+      console.log('Attempting registration for:', email);
+      
+      const { data, error } = await signUp(email, password);
 
       if (error) {
         throw error;
