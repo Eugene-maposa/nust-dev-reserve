@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
@@ -49,11 +50,13 @@ const Dashboard = () => {
   const [showBookings, setShowBookings] = useState(false);
   const [showResources, setShowResources] = useState(false);
 
-  // Fetch user bookings using React Query
+  // Fetch user bookings using React Query with the fixed foreign key relationship
   const { data: bookings = [], isLoading: isLoadingBookings } = useQuery({
     queryKey: ['bookings', user?.id],
     queryFn: async () => {
       if (!user) return [];
+      
+      console.log('Fetching bookings for user:', user.id);
       
       const { data, error } = await supabase
         .from('bookings')
@@ -63,19 +66,27 @@ const Dashboard = () => {
           time_slot,
           status,
           purpose,
-          room:rooms(id, name, type, status)
+          rooms!fk_bookings_room(
+            id,
+            name,
+            type,
+            status
+          )
         `)
         .eq('user_id', user.id)
         .order('created_at', { ascending: false });
         
       if (error) {
+        console.error('Error fetching bookings:', error);
         throw new Error(error.message);
       }
+      
+      console.log('Fetched bookings:', data);
       
       // Transform data to match the Booking interface
       return data.map((booking: any) => ({
         id: booking.id,
-        resource: booking.room?.name || 'Unknown',
+        resource: booking.rooms?.name || 'Unknown Room',
         date: new Date(booking.date).toLocaleDateString('en-US', {
           year: 'numeric',
           month: 'long',
@@ -93,13 +104,18 @@ const Dashboard = () => {
   const { data: resources = [], isLoading: isLoadingResources } = useQuery({
     queryKey: ['resources'],
     queryFn: async () => {
+      console.log('Fetching resources...');
+      
       const { data, error } = await supabase
         .from('rooms')
         .select('*');
         
       if (error) {
+        console.error('Error fetching resources:', error);
         throw new Error(error.message);
       }
+      
+      console.log('Fetched resources:', data);
       
       return data.map((room: any) => ({
         id: room.id,
@@ -122,6 +138,20 @@ const Dashboard = () => {
     resource.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
     (filterStatus === 'all' || resource.status === filterStatus)
   );
+
+  if (isLoadingBookings) {
+    return (
+      <Layout>
+        <PageHeader 
+          title="Dashboard" 
+          subtitle="Loading your dashboard..."
+        />
+        <div className="container mx-auto px-4 py-12">
+          <div className="text-center">Loading...</div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout>
@@ -159,15 +189,15 @@ const Dashboard = () => {
           
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Hours</CardTitle>
+              <CardTitle className="text-sm font-medium">Total Bookings</CardTitle>
               <Clock className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {bookings.filter(b => b.status === 'approved').length * 2}
+                {bookings.length}
               </div>
               <p className="text-xs text-muted-foreground">
-                Hours booked this month
+                All time bookings
               </p>
             </CardContent>
           </Card>
@@ -222,23 +252,27 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
-                {bookings.slice(0, 2).map((booking) => (
-                  <div key={booking.id} className="flex items-center justify-between">
-                    <div>
-                      <p className="font-medium">{booking.resource}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {booking.date} - {booking.time}
-                      </p>
+                {bookings.length > 0 ? (
+                  bookings.slice(0, 2).map((booking) => (
+                    <div key={booking.id} className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{booking.resource}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {booking.date} - {booking.time}
+                        </p>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-xs ${
+                        booking.status === 'approved' ? 'bg-green-100 text-green-800' :
+                        booking.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                        'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {booking.status}
+                      </span>
                     </div>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      booking.status === 'approved' ? 'bg-green-100 text-green-800' :
-                      booking.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                      'bg-yellow-100 text-yellow-800'
-                    }`}>
-                      {booking.status}
-                    </span>
-                  </div>
-                ))}
+                  ))
+                ) : (
+                  <p className="text-muted-foreground">No recent bookings</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -247,7 +281,7 @@ const Dashboard = () => {
         {showBookings && (
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>My Bookings</CardTitle>
+              <CardTitle>My Bookings ({bookings.length})</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center space-x-2 mb-4">
@@ -275,36 +309,42 @@ const Dashboard = () => {
                 </Select>
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Resource</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Time</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Purpose</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredBookings.map((booking) => (
-                    <TableRow key={booking.id}>
-                      <TableCell>{booking.resource}</TableCell>
-                      <TableCell>{booking.date}</TableCell>
-                      <TableCell>{booking.time}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          booking.status === 'approved' ? 'bg-green-100 text-green-800' :
-                          booking.status === 'rejected' ? 'bg-red-100 text-red-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {booking.status}
-                        </span>
-                      </TableCell>
-                      <TableCell>{booking.purpose}</TableCell>
+              {filteredBookings.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Resource</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Time</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Purpose</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredBookings.map((booking) => (
+                      <TableRow key={booking.id}>
+                        <TableCell>{booking.resource}</TableCell>
+                        <TableCell>{booking.date}</TableCell>
+                        <TableCell>{booking.time}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            booking.status === 'approved' ? 'bg-green-100 text-green-800' :
+                            booking.status === 'rejected' ? 'bg-red-100 text-red-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {booking.status}
+                          </span>
+                        </TableCell>
+                        <TableCell>{booking.purpose}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">
+                  {searchQuery || filterStatus !== 'all' ? 'No bookings match your search criteria' : 'No bookings found'}
+                </p>
+              )}
             </CardContent>
           </Card>
         )}
@@ -312,7 +352,7 @@ const Dashboard = () => {
         {showResources && (
           <Card className="mt-6">
             <CardHeader>
-              <CardTitle>Available Resources</CardTitle>
+              <CardTitle>Available Resources ({resources.length})</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex items-center space-x-2 mb-4">
@@ -338,34 +378,40 @@ const Dashboard = () => {
                 </Select>
               </div>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Capacity</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredResources.map((resource) => (
-                    <TableRow key={resource.id}>
-                      <TableCell>{resource.name}</TableCell>
-                      <TableCell>{resource.type}</TableCell>
-                      <TableCell>
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          resource.status === 'available' ? 'bg-green-100 text-green-800' :
-                          resource.status === 'in-use' ? 'bg-blue-100 text-blue-800' :
-                          'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {resource.status}
-                        </span>
-                      </TableCell>
-                      <TableCell>{resource.capacity || 'N/A'}</TableCell>
+              {filteredResources.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Capacity</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredResources.map((resource) => (
+                      <TableRow key={resource.id}>
+                        <TableCell>{resource.name}</TableCell>
+                        <TableCell>{resource.type}</TableCell>
+                        <TableCell>
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            resource.status === 'available' ? 'bg-green-100 text-green-800' :
+                            resource.status === 'in-use' ? 'bg-blue-100 text-blue-800' :
+                            'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {resource.status}
+                          </span>
+                        </TableCell>
+                        <TableCell>{resource.capacity || 'N/A'}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-center text-muted-foreground py-8">
+                  {searchQuery || filterStatus !== 'all' ? 'No resources match your search criteria' : 'No resources found'}
+                </p>
+              )}
             </CardContent>
           </Card>
         )}
