@@ -30,6 +30,9 @@ const Navbar = () => {
                 <Link to="/map" className="flex items-center px-3 py-2 rounded-md hover:bg-university-blue/80 transition-colors">
                   <Map className="mr-2 h-4 w-4" /> Map
                 </Link>
+                <Link to="/projects" className="flex items-center px-3 py-2 rounded-md hover:bg-university-blue/80 transition-colors">
+                  <User className="mr-2 h-4 w-4" /> Projects
+                </Link>
               </>
             )}
             <Link to="/blog" className="flex items-center px-3 py-2 rounded-md hover:bg-university-blue/80 transition-colors">
@@ -94,6 +97,13 @@ const Navbar = () => {
                   onClick={() => setIsOpen(false)}
                 >
                   <Map className="inline mr-2 h-4 w-4" /> Map
+                </Link>
+                <Link 
+                  to="/projects" 
+                  className="block px-3 py-2 rounded-md hover:bg-university-blue/80 transition-colors"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <User className="inline mr-2 h-4 w-4" /> Projects
                 </Link>
               </>
             )}

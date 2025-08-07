@@ -60,7 +60,8 @@ import {
   Shield,
   LogOut,
   Eye,
-  EyeOff
+  EyeOff,
+  Target
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -186,6 +187,7 @@ const Admin = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
 
   // Check user permissions on component mount
   useEffect(() => {
@@ -236,7 +238,7 @@ const Admin = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      await Promise.all([fetchUsers(), fetchBookings(), fetchRooms()]);
+      await Promise.all([fetchUsers(), fetchBookings(), fetchRooms(), fetchProjects()]);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
@@ -339,6 +341,28 @@ const Admin = () => {
       setRooms(typedRooms);
     } catch (error) {
       console.error("Error fetching rooms:", error);
+      throw error;
+    }
+  };
+
+  const fetchProjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select(`
+          *,
+          user_profiles!projects_user_id_fkey (
+            full_name,
+            email
+          ),
+          project_stages (*)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProjects(data || []);
+    } catch (error) {
+      console.error("Error fetching projects:", error);
       throw error;
     }
   };
@@ -936,6 +960,19 @@ const Admin = () => {
               </div>
               <p className="text-xs text-muted-foreground">
                 {rooms.filter(r => r.status === 'available').length} resources available
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
+              <Target className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{projects.length}</div>
+              <p className="text-xs text-muted-foreground">
+                TRL tracking enabled
               </p>
             </CardContent>
           </Card>

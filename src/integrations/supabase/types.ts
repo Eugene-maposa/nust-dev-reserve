@@ -154,6 +154,101 @@ export type Database = {
         }
         Relationships: []
       }
+      project_stages: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          description: string | null
+          evidence_url: string | null
+          id: string
+          is_completed: boolean
+          notes: string | null
+          project_id: string
+          stage_name: string
+          trl_level: number
+          updated_at: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          evidence_url?: string | null
+          id?: string
+          is_completed?: boolean
+          notes?: string | null
+          project_id: string
+          stage_name: string
+          trl_level: number
+          updated_at?: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          description?: string | null
+          evidence_url?: string | null
+          id?: string
+          is_completed?: boolean
+          notes?: string | null
+          project_id?: string
+          stage_name?: string
+          trl_level?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_stages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          category: string
+          completed_stages: Json
+          created_at: string
+          current_trl_level: number
+          description: string | null
+          expected_completion_date: string | null
+          id: string
+          start_date: string
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          completed_stages?: Json
+          created_at?: string
+          current_trl_level?: number
+          description?: string | null
+          expected_completion_date?: string | null
+          id?: string
+          start_date?: string
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          completed_stages?: Json
+          created_at?: string
+          current_trl_level?: number
+          description?: string | null
+          expected_completion_date?: string | null
+          id?: string
+          start_date?: string
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       rooms: {
         Row: {
           capacity: number | null
