@@ -17,6 +17,7 @@ import About from "@/pages/About";
 import NotFound from "@/pages/NotFound";
 import Admin from "@/pages/Admin";
 import Dashboard from "@/pages/Dashboard";
+import InnovationHub from "@/pages/InnovationHub";
 import ResetPassword from './pages/ResetPassword';
 import Unauthorized from "./pages/Unauthorized";
 import { AuthProvider } from "./contexts/AuthContext";
@@ -38,6 +39,7 @@ const AppRoutes = () => (
     <Route path="/login" element={<Login />} />
     <Route path="/reset-password" element={<ResetPassword />} />
     <Route path="/about" element={<About />} />
+    <Route path="/innovation-hub" element={<InnovationHub />} />
     <Route path="/unauthorized" element={<Unauthorized />} />
     
     {/* Public blog routes - no authentication required */}

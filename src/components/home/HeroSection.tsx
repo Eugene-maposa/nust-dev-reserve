@@ -26,6 +26,11 @@ const HeroSection = () => {
                   <Calendar className="mr-2 h-4 w-4" /> Book Now
                 </Button>
               </Link>
+              <Link to="/innovation-hub">
+                <Button className="bg-blue-600 text-white hover:bg-blue-700">
+                  <Users className="mr-2 h-4 w-4" /> Apply for Innovation Hub
+                </Button>
+              </Link>
               <Link to="/about">
                 <Button variant="outline" className="border-white text-white hover:bg-white/10">
                   <Info className="mr-2 h-4 w-4" /> Learn More
