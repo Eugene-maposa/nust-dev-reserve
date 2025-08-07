@@ -99,13 +99,13 @@ const BlogForm = () => {
 
   React.useEffect(() => {
     setIsMounted(true);
-    if (post) {
+    if (post && typeof post === 'object' && 'title' in post) {
       form.reset({
         title: post.title,
         excerpt: post.excerpt,
         content: post.content,
         image_url: post.image_url,
-        author_name: post.blog_authors?.name || '',
+        author_name: (post as any).blog_authors?.name || '',
       });
     }
   }, [post, form]);

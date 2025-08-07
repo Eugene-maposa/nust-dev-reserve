@@ -114,7 +114,15 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_bookings_room"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       password_reset_tokens: {
         Row: {
@@ -224,6 +232,10 @@ export type Database = {
       }
       generate_password_reset_token: {
         Args: { user_email: string }
+        Returns: string
+      }
+      get_current_user_role: {
+        Args: Record<PropertyKey, never>
         Returns: string
       }
       reset_admin_password: {
