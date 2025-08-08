@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '@/components/layout/Layout';
 import PageHeader from '@/components/ui/PageHeader';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -188,12 +188,92 @@ const Admin = () => {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
+  const [hubApplications, setHubApplications] = useState<any[]>([]);
+  
+  // Stats state
+  const [stats, setStats] = useState({
+    totalUsers: 0,
+    activeBookings: 0,
+    resourceUtilization: 0,
+    activeProjects: 0,
+    pendingApplications: 0
+  });
+
+  // Application state
+  const [selectedApplication, setSelectedApplication] = useState<any>(null);
+  const [isApplicationDetailOpen, setIsApplicationDetailOpen] = useState(false);
 
   // Check user permissions on component mount
   useEffect(() => {
     checkAuth();
     fetchData();
   }, []);
+
+  // Update stats when data changes
+  useEffect(() => {
+    updateStats();
+  }, [users, bookings, rooms, projects, hubApplications]);
+
+  // Innovation Hub application handlers
+  const handleViewApplication = (application: any) => {
+    setSelectedApplication(application);
+    setIsApplicationDetailOpen(true);
+  };
+
+  const handleApproveApplication = async (applicationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('innovation_hub_applications')
+        .update({ 
+          status: 'approved',
+          approved_by: (await supabase.auth.getSession()).data.session?.user.id
+        })
+        .eq('id', applicationId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Application Approved",
+        description: "The Innovation Hub application has been approved."
+      });
+
+      fetchHubApplications();
+      updateStats();
+    } catch (error) {
+      console.error('Error approving application:', error);
+      toast({
+        title: "Error", 
+        description: "Failed to approve application. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRejectApplication = async (applicationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('innovation_hub_applications')
+        .update({ status: 'rejected' })
+        .eq('id', applicationId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Application Rejected",
+        description: "The Innovation Hub application has been rejected."
+      });
+
+      fetchHubApplications();
+      updateStats();
+    } catch (error) {
+      console.error('Error rejecting application:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reject application. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
   
   const checkAuth = async () => {
     try {
@@ -238,7 +318,14 @@ const Admin = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      await Promise.all([fetchUsers(), fetchBookings(), fetchRooms(), fetchProjects()]);
+      await Promise.all([
+        fetchUsers(), 
+        fetchBookings(), 
+        fetchRooms(), 
+        fetchProjects(),
+        fetchHubApplications()
+      ]);
+      updateStats();
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
@@ -347,25 +434,68 @@ const Admin = () => {
 
   const fetchProjects = async () => {
     try {
-      const { data, error } = await supabase
+      const { data: projectsData, error } = await supabase
         .from('projects')
         .select(`
           *,
-          user_profiles!projects_user_id_fkey (
-            full_name,
-            email
-          ),
-          project_stages (*)
+          user_profiles!inner(full_name, email)
         `)
         .order('created_at', { ascending: false });
-
+      
       if (error) throw error;
-      setProjects(data || []);
+      setProjects(projectsData || []);
     } catch (error) {
-      console.error("Error fetching projects:", error);
+      console.error('Error fetching projects:', error);
       throw error;
     }
   };
+
+  const fetchHubApplications = async () => {
+    try {
+      const { data: applicationsData, error } = await supabase
+        .from('innovation_hub_applications')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      setHubApplications(applicationsData || []);
+    } catch (error) {
+      console.error('Error fetching hub applications:', error);
+      throw error;
+    }
+  };
+
+  const updateStats = () => {
+    // Calculate resource utilization
+    const totalRooms = rooms.length;
+    const inUseRooms = rooms.filter(room => room.status === 'in-use').length;
+    const utilization = totalRooms > 0 ? Math.round((inUseRooms / totalRooms) * 100) : 0;
+
+    // Count active bookings (today and future)
+    const today = new Date().toISOString().split('T')[0];
+    const activeBookingsCount = bookings.filter(booking => 
+      booking.date >= today && booking.status === 'approved'
+    ).length;
+
+    // Count active projects
+    const activeProjectsCount = projects.filter(project => 
+      project.status === 'active'
+    ).length;
+
+    // Count pending applications
+    const pendingApplicationsCount = hubApplications.filter(app => 
+      app.status === 'pending'
+    ).length;
+
+    setStats({
+      totalUsers: users.length,
+      activeBookings: activeBookingsCount,
+      resourceUtilization: utilization,
+      activeProjects: activeProjectsCount,
+      pendingApplications: pendingApplicationsCount
+    });
+  };
+
 
   // Filter functions
   const filteredUsers = users.filter(user => 
@@ -984,6 +1114,8 @@ const Admin = () => {
               <TabsTrigger value="bookings">Bookings</TabsTrigger>
               <TabsTrigger value="users">Users</TabsTrigger>
               <TabsTrigger value="resources">Resources</TabsTrigger>
+              <TabsTrigger value="projects">Projects</TabsTrigger>
+              <TabsTrigger value="hub-applications">Innovation Hub</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
             
@@ -1239,6 +1371,138 @@ const Admin = () => {
                                   <Button variant="outline" size="icon" onClick={() => handleDeleteConfirm(room.id, 'room')}>
                                     <Trash2 className="h-4 w-4 text-red-500" />
                                   </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="projects" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Innovation Projects</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Project Title</TableHead>
+                          <TableHead>Owner</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>TRL Level</TableHead>
+                          <TableHead>Start Date</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {projects.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center">No projects found</TableCell>
+                          </TableRow>
+                        ) : (
+                          projects.map((project) => (
+                            <TableRow key={project.id}>
+                              <TableCell className="font-medium">{project.title}</TableCell>
+                              <TableCell>{project.user_profiles?.full_name || project.user_profiles?.email}</TableCell>
+                              <TableCell>
+                                <span className={`px-2 py-1 rounded-full text-xs ${
+                                  project.status === 'active' ? 'bg-green-100 text-green-800' :
+                                  project.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                                  'bg-gray-100 text-gray-800'
+                                }`}>
+                                  {project.status}
+                                </span>
+                              </TableCell>
+                              <TableCell>TRL {project.current_trl_level}</TableCell>
+                              <TableCell>{format(new Date(project.start_date), 'MMM dd, yyyy')}</TableCell>
+                              <TableCell>
+                                <Button variant="ghost" size="sm">
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="hub-applications" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Innovation Hub Applications</CardTitle>
+                    <CardDescription>Review and manage applications for Innovation Hub access</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Applicant</TableHead>
+                          <TableHead>Project Title</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Applied</TableHead>
+                          <TableHead>Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {hubApplications.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center">No applications found</TableCell>
+                          </TableRow>
+                        ) : (
+                          hubApplications.map((application) => (
+                            <TableRow key={application.id}>
+                              <TableCell>
+                                <div>
+                                  <div className="font-medium">{application.full_name}</div>
+                                  <div className="text-sm text-muted-foreground">{application.email}</div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="font-medium">{application.project_title}</TableCell>
+                              <TableCell>
+                                <span className={`px-2 py-1 rounded-full text-xs ${
+                                  application.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                  application.status === 'approved' ? 'bg-green-100 text-green-800' :
+                                  'bg-red-100 text-red-800'
+                                }`}>
+                                  {application.status}
+                                </span>
+                              </TableCell>
+                              <TableCell>{format(new Date(application.created_at), 'MMM dd, yyyy')}</TableCell>
+                              <TableCell>
+                                <div className="flex space-x-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => handleViewApplication(application)}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  {application.status === 'pending' && (
+                                    <>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm"
+                                        onClick={() => handleApproveApplication(application.id)}
+                                      >
+                                        <CheckCircle2 className="h-4 w-4 text-green-600" />
+                                      </Button>
+                                      <Button 
+                                        variant="ghost" 
+                                        size="sm"
+                                        onClick={() => handleRejectApplication(application.id)}
+                                      >
+                                        <AlertCircle className="h-4 w-4 text-red-600" />
+                                      </Button>
+                                    </>
+                                  )}
                                 </div>
                               </TableCell>
                             </TableRow>
@@ -2100,6 +2364,107 @@ const Admin = () => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Application Detail Dialog */}
+      <Dialog open={isApplicationDetailOpen} onOpenChange={setIsApplicationDetailOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Innovation Hub Application Details</DialogTitle>
+          </DialogHeader>
+          {selectedApplication && (
+            <div className="py-4 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="font-medium">Applicant Name</Label>
+                  <p className="text-sm">{selectedApplication.full_name}</p>
+                </div>
+                <div>
+                  <Label className="font-medium">Email</Label>
+                  <p className="text-sm">{selectedApplication.email}</p>
+                </div>
+                <div>
+                  <Label className="font-medium">Phone</Label>
+                  <p className="text-sm">{selectedApplication.phone || 'Not provided'}</p>
+                </div>
+                <div>
+                  <Label className="font-medium">Student Number</Label>
+                  <p className="text-sm">{selectedApplication.student_number || 'Not provided'}</p>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="font-medium">Project Title</Label>
+                <p className="text-sm">{selectedApplication.project_title}</p>
+              </div>
+              
+              <div>
+                <Label className="font-medium">Project Description</Label>
+                <p className="text-sm">{selectedApplication.project_description}</p>
+              </div>
+              
+              <div>
+                <Label className="font-medium">Team Members</Label>
+                <p className="text-sm">{selectedApplication.team_members || 'Not specified'}</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="font-medium">Expected Duration</Label>
+                  <p className="text-sm">{selectedApplication.expected_duration || 'Not specified'}</p>
+                </div>
+                <div>
+                  <Label className="font-medium">Status</Label>
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    selectedApplication.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                    selectedApplication.status === 'approved' ? 'bg-green-100 text-green-800' :
+                    'bg-red-100 text-red-800'
+                  }`}>
+                    {selectedApplication.status}
+                  </span>
+                </div>
+              </div>
+              
+              <div>
+                <Label className="font-medium">Resources Needed</Label>
+                <p className="text-sm">{selectedApplication.resources_needed || 'Not specified'}</p>
+              </div>
+              
+              {selectedApplication.admin_notes && (
+                <div>
+                  <Label className="font-medium">Admin Notes</Label>
+                  <p className="text-sm">{selectedApplication.admin_notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsApplicationDetailOpen(false)}>
+              Close
+            </Button>
+            {selectedApplication?.status === 'pending' && (
+              <>
+                <Button 
+                  variant="destructive"
+                  onClick={() => {
+                    handleRejectApplication(selectedApplication.id);
+                    setIsApplicationDetailOpen(false);
+                  }}
+                >
+                  Reject
+                </Button>
+                <Button 
+                  onClick={() => {
+                    handleApproveApplication(selectedApplication.id);
+                    setIsApplicationDetailOpen(false);
+                  }}
+                >
+                  Approve
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };

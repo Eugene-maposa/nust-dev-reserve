@@ -124,6 +124,63 @@ export type Database = {
           },
         ]
       }
+      innovation_hub_applications: {
+        Row: {
+          admin_notes: string | null
+          approved_by: string | null
+          created_at: string
+          email: string
+          expected_duration: string | null
+          full_name: string
+          id: string
+          phone: string | null
+          project_description: string
+          project_title: string
+          resources_needed: string | null
+          status: string
+          student_number: string | null
+          team_members: string | null
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          admin_notes?: string | null
+          approved_by?: string | null
+          created_at?: string
+          email: string
+          expected_duration?: string | null
+          full_name: string
+          id?: string
+          phone?: string | null
+          project_description: string
+          project_title: string
+          resources_needed?: string | null
+          status?: string
+          student_number?: string | null
+          team_members?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          admin_notes?: string | null
+          approved_by?: string | null
+          created_at?: string
+          email?: string
+          expected_duration?: string | null
+          full_name?: string
+          id?: string
+          phone?: string | null
+          project_description?: string
+          project_title?: string
+          resources_needed?: string | null
+          status?: string
+          student_number?: string | null
+          team_members?: string | null
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       password_reset_tokens: {
         Row: {
           created_at: string | null
