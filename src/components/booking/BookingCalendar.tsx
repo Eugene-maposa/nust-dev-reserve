@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent } from '@/components/ui/card';
 import {
@@ -9,20 +9,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { addDays, format, isSameDay } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import BookingDetailsForm from './BookingDetailsForm';
 
-// Mock data for available rooms
-const rooms = [
-  { id: 1, name: 'Computer Lab A', capacity: 30 },
-  { id: 2, name: 'Computer Lab B', capacity: 25 },
-  { id: 3, name: 'Computer Lab C', capacity: 20 },
-  { id: 4, name: 'Study Room 1', capacity: 10 },
-  { id: 5, name: 'Study Room 2', capacity: 8 },
-  { id: 6, name: 'Conference Room', capacity: 15 }
-];
-
-// Mock data for time slots
+// Time slots available for booking
 const generateTimeSlots = () => {
   const slots = [];
   for (let hour = 8; hour < 20; hour++) {
@@ -33,25 +26,92 @@ const generateTimeSlots = () => {
 
 const timeSlots = generateTimeSlots();
 
-// Mock data for bookings (to show some time slots as unavailable)
-const mockBookings = [
-  { date: new Date(), room: 1, slot: '10:00 - 11:00' },
-  { date: new Date(), room: 2, slot: '14:00 - 15:00' },
-  { date: addDays(new Date(), 1), room: 1, slot: '9:00 - 10:00' },
-];
+interface Room {
+  id: string;
+  name: string;
+  capacity: number;
+  type: string;
+  status: string;
+  description?: string;
+}
+
+interface Booking {
+  id: string;
+  date: string;
+  time_slot: string;
+  room_id: string;
+  status: string;
+}
 
 const BookingCalendar = () => {
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [selectedRoom, setSelectedRoom] = useState<string>("");
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("");
   const [showDetailsForm, setShowDetailsForm] = useState(false);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  const isTimeSlotAvailable = (date: Date, roomId: number, slot: string) => {
-    return !mockBookings.some(booking => 
-      isSameDay(booking.date, date) && 
-      booking.room === roomId && 
-      booking.slot === slot
+  useEffect(() => {
+    fetchRoomsAndBookings();
+  }, []);
+
+  const fetchRoomsAndBookings = async () => {
+    try {
+      // Fetch rooms
+      const { data: roomsData, error: roomsError } = await supabase
+        .from('rooms')
+        .select('*')
+        .eq('status', 'available');
+
+      if (roomsError) throw roomsError;
+
+      // Fetch existing bookings
+      const { data: bookingsData, error: bookingsError } = await supabase
+        .from('bookings')
+        .select('id, date, time_slot, room_id, status')
+        .in('status', ['confirmed', 'pending']);
+
+      if (bookingsError) throw bookingsError;
+
+      setRooms(roomsData || []);
+      setBookings(bookingsData || []);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load rooms and bookings",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const isTimeSlotAvailable = (date: Date, roomId: string, slot: string) => {
+    const dateString = format(date, 'yyyy-MM-dd');
+    return !bookings.some(booking => 
+      booking.date === dateString && 
+      booking.room_id === roomId && 
+      booking.time_slot === slot &&
+      ['confirmed', 'pending'].includes(booking.status)
     );
+  };
+
+  const getAvailableTimeSlots = (date: Date, roomId: string) => {
+    return timeSlots.filter(slot => isTimeSlotAvailable(date, roomId, slot));
+  };
+
+  const getBookedTimeSlots = (date: Date, roomId: string) => {
+    const dateString = format(date, 'yyyy-MM-dd');
+    return bookings
+      .filter(booking => 
+        booking.date === dateString && 
+        booking.room_id === roomId &&
+        ['confirmed', 'pending'].includes(booking.status)
+      )
+      .map(booking => booking.time_slot);
   };
 
   const handleNext = () => {
@@ -63,15 +123,28 @@ const BookingCalendar = () => {
   };
 
   if (showDetailsForm && date && selectedRoom && selectedTimeSlot) {
+    const selectedRoomData = rooms.find(r => r.id === selectedRoom);
     return (
       <BookingDetailsForm
         bookingData={{
           date,
-          room: rooms.find(r => r.id.toString() === selectedRoom)?.name || '',
+          room: selectedRoomData?.name || '',
+          roomId: selectedRoom,
           timeSlot: selectedTimeSlot,
         }}
         onBack={handleBack}
+        onBookingComplete={fetchRoomsAndBookings}
       />
+    );
+  }
+
+  if (loading) {
+    return (
+      <Card className="w-full max-w-4xl mx-auto">
+        <CardContent className="p-6 text-center">
+          <p>Loading available rooms...</p>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -107,13 +180,37 @@ const BookingCalendar = () => {
                   <SelectValue placeholder="Select a room" />
                 </SelectTrigger>
                 <SelectContent>
-                  {rooms.map((room) => (
-                    <SelectItem key={room.id} value={room.id.toString()}>
-                      {room.name} (Capacity: {room.capacity})
-                    </SelectItem>
-                  ))}
+                  {rooms.map((room) => {
+                    const availableSlots = date ? getAvailableTimeSlots(date, room.id).length : 0;
+                    const totalSlots = timeSlots.length;
+                    return (
+                      <SelectItem key={room.id} value={room.id}>
+                        <div className="flex justify-between items-center w-full">
+                          <div>
+                            <span className="font-medium">{room.name}</span>
+                            <span className="text-sm text-gray-500 ml-2">
+                              ({room.type} • Capacity: {room.capacity})
+                            </span>
+                          </div>
+                          <Badge variant={availableSlots > 0 ? "secondary" : "destructive"} className="ml-2">
+                            {availableSlots}/{totalSlots} available
+                          </Badge>
+                        </div>
+                      </SelectItem>
+                    );
+                  })}
                 </SelectContent>
               </Select>
+              {date && selectedRoom && (
+                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                  <p className="text-sm font-medium text-blue-900">
+                    Available slots for {format(date, 'MMM d, yyyy')}: 
+                    <span className="ml-1 font-bold">
+                      {getAvailableTimeSlots(date, selectedRoom).length} of {timeSlots.length}
+                    </span>
+                  </p>
+                </div>
+              )}
             </div>
             
             {selectedRoom && (
@@ -121,22 +218,32 @@ const BookingCalendar = () => {
                 <h3 className="text-lg font-medium mb-4">Select Time Slot</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {timeSlots.map((slot) => {
-                    const roomId = parseInt(selectedRoom);
-                    const isAvailable = date ? isTimeSlotAvailable(date, roomId, slot) : false;
+                    const isAvailable = date ? isTimeSlotAvailable(date, selectedRoom, slot) : false;
                     
                     return (
                       <Button
                         key={slot}
                         variant={selectedTimeSlot === slot ? "default" : "outline"}
-                        className={`justify-start ${!isAvailable ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : ''}`}
+                        className={`justify-start text-sm ${!isAvailable ? 'opacity-50 cursor-not-allowed' : ''}`}
                         onClick={() => isAvailable && setSelectedTimeSlot(slot)}
                         disabled={!isAvailable}
                       >
-                        {slot}
+                        <div className="flex items-center justify-between w-full">
+                          <span>{slot}</span>
+                          {!isAvailable && (
+                            <Badge variant="destructive" className="ml-2 text-xs">Booked</Badge>
+                          )}
+                        </div>
                       </Button>
                     );
                   })}
                 </div>
+                {date && selectedRoom && (
+                  <div className="mt-4 text-sm text-gray-600">
+                    <p><strong>Available:</strong> {getAvailableTimeSlots(date, selectedRoom).length} slots</p>
+                    <p><strong>Booked:</strong> {getBookedTimeSlots(date, selectedRoom).length} slots</p>
+                  </div>
+                )}
               </div>
             )}
             
@@ -147,7 +254,7 @@ const BookingCalendar = () => {
                   <strong>Date:</strong> {format(date, 'PPP')}
                 </p>
                 <p className="text-sm text-gray-600 mb-1">
-                  <strong>Room:</strong> {rooms.find(r => r.id.toString() === selectedRoom)?.name}
+                  <strong>Room:</strong> {rooms.find(r => r.id === selectedRoom)?.name}
                 </p>
                 <p className="text-sm text-gray-600 mb-4">
                   <strong>Time:</strong> {selectedTimeSlot}

@@ -1,8 +1,10 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
+import { format } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,7 +17,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import BookingConfirmation from './BookingConfirmation';
 
@@ -31,17 +32,17 @@ interface BookingDetailsFormProps {
   bookingData: {
     date: Date;
     room: string;
+    roomId: string;
     timeSlot: string;
   };
   onBack: () => void;
+  onBookingComplete?: () => void;
 }
 
-const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({ bookingData, onBack }) => {
-  const navigate = useNavigate();
+const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({ bookingData, onBack, onBookingComplete }) => {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
-  const [showConfirmation, setShowConfirmation] = React.useState(false);
-  const [formData, setFormData] = React.useState<z.infer<typeof formSchema> | null>(null);
+  const [isConfirmed, setIsConfirmed] = React.useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -56,44 +57,60 @@ const BookingDetailsForm: React.FC<BookingDetailsFormProps> = ({ bookingData, on
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setIsSubmitting(true);
+    
     try {
-      // Here you would typically make an API call to submit the booking
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
-      setFormData(values);
-      setShowConfirmation(true);
-      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error('Please log in to make a booking');
+      }
+
+      const { error } = await supabase
+        .from('bookings')
+        .insert({
+          user_id: user.id,
+          room_id: bookingData.roomId,
+          date: format(bookingData.date, 'yyyy-MM-dd'),
+          time_slot: bookingData.timeSlot,
+          purpose: values.purpose,
+          status: 'confirmed'
+        });
+
+      if (error) throw error;
+
+      setIsConfirmed(true);
       toast({
-        title: "Booking Successful",
-        description: "Your booking has been confirmed. You will receive a confirmation email shortly.",
+        title: "Booking Confirmed",
+        description: "Your booking has been successfully created!",
       });
+      
+      // Refresh the bookings data
+      onBookingComplete?.();
     } catch (error) {
+      console.error('Error creating booking:', error);
       toast({
-        variant: "destructive",
         title: "Booking Failed",
-        description: "There was an error processing your booking. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create booking",
+        variant: "destructive",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  if (showConfirmation && formData) {
+  if (isConfirmed) {
     return (
       <BookingConfirmation
         bookingData={{
-          date: bookingData.date,
-          room: bookingData.room,
-          timeSlot: bookingData.timeSlot,
-          fullName: formData.fullName,
-          studentNumber: formData.studentNumber,
-          email: formData.email,
-          phone: formData.phone,
-          purpose: formData.purpose
+          ...bookingData,
+          fullName: form.getValues('fullName'),
+          studentNumber: form.getValues('studentNumber'),
+          email: form.getValues('email'),
+          phone: form.getValues('phone'),
+          purpose: form.getValues('purpose'),
         }}
         onBack={() => {
-          setShowConfirmation(false);
-          setFormData(null);
+          setIsConfirmed(false);
+          onBack();
         }}
       />
     );

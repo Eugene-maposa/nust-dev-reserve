@@ -7,8 +7,11 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { ArrowLeft } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import MyBookings from '@/components/booking/MyBookings';
 
 const Bookings = () => {
+  const { user } = useAuth();
   return (
     <Layout>
       <PageHeader 
@@ -37,16 +40,22 @@ const Bookings = () => {
           </TabsContent>
           
           <TabsContent value="my-bookings">
-            <div className="max-w-4xl mx-auto text-center p-8 border rounded-lg bg-gray-50">
-              <h2 className="text-2xl font-bold mb-4">Please Login to View Your Bookings</h2>
-              <p className="text-gray-600 mb-6">
-                You need to be logged in to view and manage your bookings.
-              </p>
-              <Link to="/login">
-                <Button className="bg-university-blue hover:bg-university-blue/90">
-                  Login to Continue
-                </Button>
-              </Link>
+            <div className="max-w-4xl mx-auto">
+              {user ? (
+                <MyBookings />
+              ) : (
+                <div className="text-center p-8 border rounded-lg bg-gray-50">
+                  <h2 className="text-2xl font-bold mb-4">Please Login to View Your Bookings</h2>
+                  <p className="text-gray-600 mb-6">
+                    You need to be logged in to view and manage your bookings.
+                  </p>
+                  <Link to="/login">
+                    <Button className="bg-university-blue hover:bg-university-blue/90">
+                      Login to Continue
+                    </Button>
+                  </Link>
+                </div>
+              )}
             </div>
           </TabsContent>
         </Tabs>
