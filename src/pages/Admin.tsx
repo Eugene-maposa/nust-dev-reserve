@@ -182,7 +182,7 @@ const Admin = () => {
   // Add new state for booking actions
   const [isBookingActionDialogOpen, setIsBookingActionDialogOpen] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
-  const [bookingAction, setBookingAction] = useState<'approve' | 'reject' | 'cancel' | null>(null);
+  const [bookingAction, setBookingAction] = useState<'approve' | 'reject' | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
   // Data state
@@ -198,7 +198,10 @@ const Admin = () => {
     activeBookings: 0,
     resourceUtilization: 0,
     activeProjects: 0,
-    pendingApplications: 0
+    pendingApplications: 0,
+    totalBookings: 0,
+    completedBookings: 0,
+    inactiveProjects: 0
   });
 
   // Application state
@@ -479,9 +482,18 @@ const Admin = () => {
       booking.date >= today && booking.status === 'approved'
     ).length;
 
-    // Count active projects
+    // Count total and completed bookings
+    const totalBookingsCount = bookings.length;
+    const completedBookingsCount = bookings.filter(booking => 
+      booking.status === 'completed'
+    ).length;
+
+    // Count active and inactive projects
     const activeProjectsCount = projects.filter(project => 
       project.status === 'active'
+    ).length;
+    const inactiveProjectsCount = projects.filter(project => 
+      project.status !== 'active'
     ).length;
 
     // Count pending applications
@@ -494,7 +506,10 @@ const Admin = () => {
       activeBookings: activeBookingsCount,
       resourceUtilization: utilization,
       activeProjects: activeProjectsCount,
-      pendingApplications: pendingApplicationsCount
+      pendingApplications: pendingApplicationsCount,
+      totalBookings: totalBookingsCount,
+      completedBookings: completedBookingsCount,
+      inactiveProjects: inactiveProjectsCount
     });
   };
 
@@ -859,7 +874,7 @@ const Admin = () => {
       
       toast({
         title: "Room Updated",
-        description: "The room information has been updated successfully.",
+        description: "The room's information has been updated successfully.",
       });
       
       setIsEditResourceOpen(false);
@@ -877,8 +892,16 @@ const Admin = () => {
     }
   };
 
+  const handleDeleteRoom = (roomId: string) => {
+    handleDeleteConfirm(roomId, 'room');
+  };
+
+  const handleDeleteBooking = (bookingId: string) => {
+    handleDeleteConfirm(bookingId, 'booking');
+  };
+
   // Update booking handlers
-  const handleBookingAction = (booking: Booking, action: 'approve' | 'reject' | 'cancel') => {
+  const handleBookingAction = (booking: Booking, action: 'approve' | 'reject') => {
     setSelectedBooking(booking);
     setBookingAction(action);
     setRejectionReason('');
@@ -900,10 +923,6 @@ const Admin = () => {
         case 'reject':
           updatedStatus = 'rejected';
           toastMessage = `Booking has been rejected${rejectionReason ? `: ${rejectionReason}` : '.'}`;
-          break;
-        case 'cancel':
-          updatedStatus = 'cancelled';
-          toastMessage = 'Booking has been cancelled.';
           break;
         default:
           return;
@@ -1235,11 +1254,6 @@ const Admin = () => {
                                           <AlertCircle className="h-4 w-4 mr-2" /> Reject
                                         </DropdownMenuItem>
                                       </>
-                                    )}
-                                    {(booking.status === 'approved' || booking.status === 'pending') && (
-                                      <DropdownMenuItem onClick={() => handleBookingAction(booking, 'cancel')}>
-                                        <Trash2 className="h-4 w-4 mr-2" /> Cancel
-                                      </DropdownMenuItem>
                                     )}
                                     <DropdownMenuItem onClick={() => handleDeleteConfirm(booking.id, 'booking')}>
                                       <Trash2 className="h-4 w-4 mr-2 text-red-500" /> Delete
@@ -2070,13 +2084,11 @@ const Admin = () => {
           <DialogHeader>
             <DialogTitle>
               {bookingAction === 'approve' ? 'Approve Booking' : 
-               bookingAction === 'reject' ? 'Reject Booking' : 
-               'Cancel Booking'}
+                bookingAction === 'reject' ? 'Reject Booking' : 'Approve Booking'}
             </DialogTitle>
             <DialogDescription>
               {bookingAction === 'approve' ? 'Confirm you want to approve this booking.' : 
-               bookingAction === 'reject' ? 'Provide a reason for rejecting this booking.' : 
-               'Confirm you want to cancel this booking.'}
+                bookingAction === 'reject' ? 'Provide a reason for rejecting this booking.' : 'Confirm you want to approve this booking.'}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4">
@@ -2124,11 +2136,10 @@ const Admin = () => {
             </Button>
             <Button 
               onClick={confirmBookingAction}
-              variant={bookingAction === 'reject' || bookingAction === 'cancel' ? 'destructive' : 'default'}
+              variant={bookingAction === 'reject' ? 'destructive' : 'default'}
             >
               {bookingAction === 'approve' ? 'Approve' : 
-               bookingAction === 'reject' ? 'Reject' : 
-               'Cancel Booking'}
+                bookingAction === 'reject' ? 'Reject' : 'Approve'}
             </Button>
           </DialogFooter>
         </DialogContent>
