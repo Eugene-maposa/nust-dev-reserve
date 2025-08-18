@@ -61,7 +61,9 @@ import {
   LogOut,
   Eye,
   EyeOff,
-  Target
+  Target,
+  Activity,
+  TrendingUp
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -1386,6 +1388,7 @@ const Admin = () => {
                 <Card>
                   <CardHeader>
                     <CardTitle>Innovation Projects</CardTitle>
+                    <CardDescription>Track Technology Readiness Level (TRL) progress for all innovation projects</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Table>
@@ -1394,7 +1397,8 @@ const Admin = () => {
                           <TableHead>Project Title</TableHead>
                           <TableHead>Owner</TableHead>
                           <TableHead>Status</TableHead>
-                          <TableHead>TRL Level</TableHead>
+                          <TableHead>TRL Progress</TableHead>
+                          <TableHead>Category</TableHead>
                           <TableHead>Start Date</TableHead>
                           <TableHead>Actions</TableHead>
                         </TableRow>
@@ -1402,7 +1406,7 @@ const Admin = () => {
                       <TableBody>
                         {projects.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={6} className="text-center">No projects found</TableCell>
+                            <TableCell colSpan={7} className="text-center">No projects found</TableCell>
                           </TableRow>
                         ) : (
                           projects.map((project) => (
@@ -1418,12 +1422,49 @@ const Admin = () => {
                                   {project.status}
                                 </span>
                               </TableCell>
-                              <TableCell>TRL {project.current_trl_level}</TableCell>
+                              <TableCell>
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2">
+                                    <Target className="h-4 w-4 text-primary" />
+                                    <span className="text-sm font-medium">TRL {project.current_trl_level}/9</span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-2">
+                                    <div 
+                                      className="bg-primary h-2 rounded-full transition-all duration-300"
+                                      style={{ width: `${(project.current_trl_level / 9) * 100}%` }}
+                                    ></div>
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {project.current_trl_level === 1 && "Basic principles observed"}
+                                    {project.current_trl_level === 2 && "Technology concept formulated"}
+                                    {project.current_trl_level === 3 && "Experimental proof of concept"}
+                                    {project.current_trl_level === 4 && "Technology validated in lab"}
+                                    {project.current_trl_level === 5 && "Technology validated in relevant environment"}
+                                    {project.current_trl_level === 6 && "Technology demonstrated in relevant environment"}
+                                    {project.current_trl_level === 7 && "System prototype demonstration in operational environment"}
+                                    {project.current_trl_level === 8 && "System complete and qualified"}
+                                    {project.current_trl_level === 9 && "Actual system proven in operational environment"}
+                                  </div>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <span className="capitalize px-2 py-1 bg-gray-100 text-gray-800 rounded text-xs">
+                                  {project.category}
+                                </span>
+                              </TableCell>
                               <TableCell>{format(new Date(project.start_date), 'MMM dd, yyyy')}</TableCell>
                               <TableCell>
-                                <Button variant="ghost" size="sm">
-                                  <Eye className="h-4 w-4" />
-                                </Button>
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="sm" title="View Project Details">
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" title="View TRL Analytics">
+                                    <Activity className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" title="View Progress Trend">
+                                    <TrendingUp className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))
