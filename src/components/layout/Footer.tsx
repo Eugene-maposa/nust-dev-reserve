@@ -74,7 +74,7 @@ const Footer = () => {
               </li>
               <li>
                 <a 
-                  href="https://twitter.com/nustzw" 
+                  href="https://twitter.com/NUSTzim" 
                   target="_blank" 
                   rel="noopener noreferrer"
                   className="flex items-center hover:text-university-gold transition-colors"

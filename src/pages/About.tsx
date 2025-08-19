@@ -18,8 +18,8 @@ const About = () => {
   return (
     <Layout>
       <PageHeader 
-        title="About the SDC" 
-        subtitle="Learn more about the National University of Science and Technology Software Development Centre"
+        title="About the Technovation Centre" 
+        subtitle="Learn more about the National University of Science and Technology Technovation Centre"
       />
       
       <div className="container mx-auto px-4 py-12">
@@ -29,32 +29,34 @@ const About = () => {
               <CardContent className="p-6">
                 <h2 className="text-2xl font-bold mb-4 text-university-blue">Our Mission</h2>
                 <p className="text-gray-700 mb-6">
-                  The Software Development Centre (SDC) at the National University of Science and Technology 
-                  is dedicated to providing students, faculty, and researchers with state-of-the-art 
-                  computing resources and an optimal environment for software development, learning, 
-                  and innovation.
+                  The Technovation Centre (TC) at the National University of Science and Technology
+                  catalyzes innovation, entrepreneurship, and technology transfer across the university
+                  and industry. We provide a nurturing environment, mentorship, and access to
+                  prototyping and venture-building resources that help ideas grow into impactful
+                  products, services, and startups.
                 </p>
                 
                 <h2 className="text-2xl font-bold mb-4 text-university-blue">About the Centre</h2>
                 <p className="text-gray-700 mb-4">
-                  Established in 2015, the SDC has evolved into a hub for technological innovation and 
-                  learning at NUST. The centre spans three floors in the Technology Building, housing 
-                  multiple computer labs, study rooms, and specialized equipment for various computing needs.
+                  Established in 2015, the Technovation Centre has grown into a university-wide hub for
+                  creativity, prototyping, and venture creation. Located in the Technology Building, the
+                  Centre brings together students, researchers, and industry partners to co-create
+                  solutions to real-world challenges.
                 </p>
                 <p className="text-gray-700 mb-6">
-                  Our facilities are equipped with the latest hardware and software resources, supporting 
-                  activities ranging from basic programming to advanced research in artificial intelligence, 
-                  virtual reality, cybersecurity, and more.
+                  Our facilities include prototyping and fabrication spaces, collaborative studios, and
+                  access to cloud and data resources. We support activities from early-stage ideation to
+                  proof-of-concept, user testing, pilot deployments, and commercialization.
                 </p>
                 
                 <h2 className="text-2xl font-bold mb-4 text-university-blue">Our Objectives</h2>
                 <ul className="list-disc list-inside space-y-2 text-gray-700 mb-6">
-                  <li>Provide accessible computing resources to all NUST students and faculty</li>
-                  <li>Support academic coursework and research activities across departments</li>
-                  <li>Facilitate industry collaboration and real-world project opportunities</li>
-                  <li>Promote innovation and entrepreneurship in software development</li>
-                  <li>Offer workshops and training sessions on emerging technologies</li>
-                  <li>Create a collaborative environment for interdisciplinary tech projects</li>
+                  <li>Provide accessible prototyping and fabrication resources for all NUST innovators</li>
+                  <li>Incubate and accelerate student and staff-led startups and projects</li>
+                  <li>Facilitate industry partnerships and technology commercialization pathways</li>
+                  <li>Run training, design sprints, hackathons, and innovation challenges</li>
+                  <li>Support multidisciplinary collaboration and human-centered problem solving</li>
+                  <li>Cultivate an entrepreneurial culture and innovation mindset on campus</li>
                 </ul>
               </CardContent>
             </Card>
@@ -66,7 +68,7 @@ const About = () => {
                 <h2 className="text-xl font-bold mb-4 text-university-blue">Centre Stats</h2>
                 <div className="space-y-4">
                   <div className="flex justify-between items-center pb-2 border-b">
-                    <span className="text-gray-700">Computer Labs</span>
+                    <span className="text-gray-700">Innovation Labs</span>
                     <span className="font-semibold">15</span>
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b">
@@ -74,19 +76,19 @@ const About = () => {
                     <span className="font-semibold">200+</span>
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b">
-                    <span className="text-gray-700">Study Rooms</span>
+                    <span className="text-gray-700">Collaboration Rooms</span>
                     <span className="font-semibold">8</span>
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b">
-                    <span className="text-gray-700">Conference Rooms</span>
+                    <span className="text-gray-700">Event & Meeting Rooms</span>
                     <span className="font-semibold">2</span>
                   </div>
                   <div className="flex justify-between items-center pb-2 border-b">
-                    <span className="text-gray-700">Annual Bookings</span>
+                    <span className="text-gray-700">Annual Participants</span>
                     <span className="font-semibold">20,000+</span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-700">Staff Members</span>
+                    <span className="text-gray-700">Mentors & Staff</span>
                     <span className="font-semibold">12</span>
                   </div>
                 </div>
@@ -99,27 +101,27 @@ const About = () => {
                 <ul className="space-y-3">
                   <li className="flex items-start">
                     <Laptop className="h-5 w-5 mr-2 text-university-blue mt-0.5" />
-                    <span className="text-gray-700">High-performance workstations with dual monitors</span>
+                    <span className="text-gray-700">Prototyping workstations and maker equipment</span>
                   </li>
                   <li className="flex items-start">
                     <Server className="h-5 w-5 mr-2 text-university-blue mt-0.5" />
-                    <span className="text-gray-700">Development servers and cloud computing resources</span>
+                    <span className="text-gray-700">Cloud computing, data, and deployment resources</span>
                   </li>
                   <li className="flex items-start">
                     <SquareCode className="h-5 w-5 mr-2 text-university-blue mt-0.5" />
-                    <span className="text-gray-700">Professional software development tools and licenses</span>
+                    <span className="text-gray-700">Design, prototyping, and collaboration tool licenses</span>
                   </li>
                   <li className="flex items-start">
                     <BookOpen className="h-5 w-5 mr-2 text-university-blue mt-0.5" />
-                    <span className="text-gray-700">Technical library and digital learning resources</span>
+                    <span className="text-gray-700">Training materials, workshops, and learning resources</span>
                   </li>
                   <li className="flex items-start">
                     <Workflow className="h-5 w-5 mr-2 text-university-blue mt-0.5" />
-                    <span className="text-gray-700">Testing and quality assurance environment</span>
+                    <span className="text-gray-700">Incubation, acceleration, and venture-building programs</span>
                   </li>
                   <li className="flex items-start">
                     <Globe className="h-5 w-5 mr-2 text-university-blue mt-0.5" />
-                    <span className="text-gray-700">High-speed internet and network infrastructure</span>
+                    <span className="text-gray-700">High-speed internet and collaboration infrastructure</span>
                   </li>
                   <li className="flex items-start">
                     <Lightbulb className="h-5 w-5 mr-2 text-university-blue mt-0.5" />
@@ -127,7 +129,7 @@ const About = () => {
                   </li>
                   <li className="flex items-start">
                     <Users className="h-5 w-5 mr-2 text-university-blue mt-0.5" />
-                    <span className="text-gray-700">Collaborative workspaces for group projects</span>
+                    <span className="text-gray-700">Mentorship network and collaborative project spaces</span>
                   </li>
                 </ul>
               </CardContent>

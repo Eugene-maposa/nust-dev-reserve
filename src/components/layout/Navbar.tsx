@@ -14,7 +14,7 @@ const Navbar = () => {
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center space-x-2">
-            <span className="text-university-gold font-bold text-xl">NUST-SDC</span>
+            <span className="text-university-gold font-bold text-xl">NUST-Technovation Centre</span>
           </Link>
           
           {/* Desktop Navigation */}

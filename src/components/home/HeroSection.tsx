@@ -11,14 +11,14 @@ const HeroSection = () => {
         <div className="flex flex-col md:flex-row items-center">
           <div className="md:w-1/2 mb-8 md:mb-0">
             <h1 className="text-4xl md:text-5xl font-bold mb-4">
-              NUST Software Development Centre
+              NUST Technovation Centre
             </h1>
             <h2 className="text-xl md:text-2xl text-university-gold mb-6">
-              Book Labs, Classrooms & Resources
+              Book Labs, Rooms & Development Resources
             </h2>
             <p className="text-lg mb-8 max-w-lg">
-              Streamlined booking system for lecturers and students to reserve 
-              computer labs, study rooms, and development resources at NUST.
+              Streamlined booking system for Innovators to reserve 
+              computer labs, development rooms, and development resources at NUST.
             </p>
             <div className="flex flex-wrap gap-4">
               <Link to="/bookings">
