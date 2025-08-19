@@ -116,13 +116,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "fk_bookings_room"
-            columns: ["room_id"]
-            isOneToOne: false
-            referencedRelation: "rooms"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "fk_bookings_rooms"
             columns: ["room_id"]
             isOneToOne: false

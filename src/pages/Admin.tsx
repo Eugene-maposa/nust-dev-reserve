@@ -374,7 +374,7 @@ const Admin = () => {
 
   const fetchBookings = async () => {
     try {
-      // Join bookings with rooms and user_profiles to get names
+      // Join bookings with rooms and user_profiles to get names using specific foreign key relationships
       const { data, error } = await supabase
         .from('bookings')
         .select(`
@@ -385,8 +385,8 @@ const Admin = () => {
           purpose,
           status,
           created_at,
-          rooms:room_id(id, name),
-          user_profiles:user_id(full_name, email)
+          rooms!fk_bookings_rooms(id, name),
+          user_profiles!fk_bookings_user_profiles(full_name, email)
         `);
 
       if (error) throw error;

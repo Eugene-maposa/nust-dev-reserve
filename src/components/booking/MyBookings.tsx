@@ -46,7 +46,7 @@ const MyBookings = () => {
           time_slot,
           status,
           purpose,
-          rooms!fk_bookings_room (
+          rooms!fk_bookings_rooms (
             id,
             name,
             type,
