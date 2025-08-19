@@ -185,6 +185,13 @@ const Admin = () => {
   const [bookingAction, setBookingAction] = useState<'approve' | 'reject' | null>(null);
   const [rejectionReason, setRejectionReason] = useState('');
 
+  // Add new state for project actions
+  const [isProjectDetailsOpen, setIsProjectDetailsOpen] = useState(false);
+  const [isTrlAnalyticsOpen, setIsTrlAnalyticsOpen] = useState(false);
+  const [isProgressTrendOpen, setIsProgressTrendOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [projectStages, setProjectStages] = useState<any[]>([]);
+
   // Data state
   const [users, setUsers] = useState<User[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -467,6 +474,39 @@ const Admin = () => {
     } catch (error) {
       console.error('Error fetching hub applications:', error);
       throw error;
+    }
+  };
+
+  const fetchProjectStages = async (projectId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('project_stages')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('trl_level', { ascending: true });
+      
+      if (error) throw error;
+      setProjectStages(data || []);
+    } catch (error) {
+      console.error('Error fetching project stages:', error);
+      throw error;
+    }
+  };
+
+  const handleProjectAction = async (project: any, action: 'details' | 'analytics' | 'trends') => {
+    setSelectedProject(project);
+    await fetchProjectStages(project.id);
+    
+    switch (action) {
+      case 'details':
+        setIsProjectDetailsOpen(true);
+        break;
+      case 'analytics':
+        setIsTrlAnalyticsOpen(true);
+        break;
+      case 'trends':
+        setIsProgressTrendOpen(true);
+        break;
     }
   };
 
@@ -1469,13 +1509,28 @@ const Admin = () => {
                               <TableCell>{format(new Date(project.start_date), 'MMM dd, yyyy')}</TableCell>
                               <TableCell>
                                 <div className="flex gap-1">
-                                  <Button variant="ghost" size="sm" title="View Project Details">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    title="View Project Details"
+                                    onClick={() => handleProjectAction(project, 'details')}
+                                  >
                                     <Eye className="h-4 w-4" />
                                   </Button>
-                                  <Button variant="ghost" size="sm" title="View TRL Analytics">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    title="View TRL Analytics"
+                                    onClick={() => handleProjectAction(project, 'analytics')}
+                                  >
                                     <Activity className="h-4 w-4" />
                                   </Button>
-                                  <Button variant="ghost" size="sm" title="View Progress Trend">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    title="View Progress Trend"
+                                    onClick={() => handleProjectAction(project, 'trends')}
+                                  >
                                     <TrendingUp className="h-4 w-4" />
                                   </Button>
                                 </div>
@@ -2514,6 +2569,350 @@ const Admin = () => {
                 </Button>
               </>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Project Details Dialog */}
+      <Dialog open={isProjectDetailsOpen} onOpenChange={setIsProjectDetailsOpen}>
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Eye className="h-5 w-5" />
+              Project Details
+            </DialogTitle>
+            <DialogDescription>
+              Comprehensive project information and metadata
+            </DialogDescription>
+          </DialogHeader>
+          {selectedProject && (
+            <div className="space-y-6 overflow-auto">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Project Title</label>
+                  <p className="text-lg font-semibold">{selectedProject.title}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Project Lead</label>
+                  <p>{selectedProject.user_profiles?.full_name || selectedProject.user_profiles?.email}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Category</label>
+                  <span className="capitalize px-2 py-1 bg-muted rounded text-sm">
+                    {selectedProject.category}
+                  </span>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Status</label>
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    selectedProject.status === 'active' ? 'bg-green-100 text-green-800' :
+                    selectedProject.status === 'completed' ? 'bg-blue-100 text-blue-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {selectedProject.status}
+                  </span>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Start Date</label>
+                  <p>{format(new Date(selectedProject.start_date), 'MMM dd, yyyy')}</p>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-muted-foreground">Expected Completion</label>
+                  <p>{selectedProject.expected_completion_date ? 
+                    format(new Date(selectedProject.expected_completion_date), 'MMM dd, yyyy') : 
+                    'Not set'
+                  }</p>
+                </div>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Description</label>
+                <p className="mt-1 text-sm leading-relaxed">{selectedProject.description}</p>
+              </div>
+              
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Current TRL Level</label>
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    <span className="font-medium">TRL {selectedProject.current_trl_level}/9</span>
+                  </div>
+                  <div className="w-full bg-muted rounded-full h-3">
+                    <div 
+                      className="bg-primary h-3 rounded-full transition-all duration-300"
+                      style={{ width: `${(selectedProject.current_trl_level / 9) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Project Stages</label>
+                <div className="mt-2 space-y-2">
+                  {projectStages.map((stage) => (
+                    <div key={stage.id} className="flex items-center gap-3 p-3 border rounded-lg">
+                      <div className={`w-3 h-3 rounded-full ${stage.is_completed ? 'bg-green-500' : 'bg-gray-300'}`} />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">TRL {stage.trl_level}: {stage.stage_name}</span>
+                          {stage.is_completed && (
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          )}
+                        </div>
+                        <p className="text-sm text-muted-foreground">{stage.description}</p>
+                        {stage.completed_at && (
+                          <p className="text-xs text-green-600 mt-1">
+                            Completed: {format(new Date(stage.completed_at), 'MMM dd, yyyy')}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIsProjectDetailsOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* TRL Analytics Dialog */}
+      <Dialog open={isTrlAnalyticsOpen} onOpenChange={setIsTrlAnalyticsOpen}>
+        <DialogContent className="sm:max-w-[800px] max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              TRL Analytics
+            </DialogTitle>
+            <DialogDescription>
+              Technology Readiness Level progression and analytics
+            </DialogDescription>
+          </DialogHeader>
+          {selectedProject && (
+            <div className="space-y-6 overflow-auto">
+              <div className="grid grid-cols-3 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-2xl font-bold text-primary">{selectedProject.current_trl_level}/9</div>
+                    <p className="text-sm text-muted-foreground">Current TRL Level</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-2xl font-bold text-green-600">
+                      {projectStages.filter(s => s.is_completed).length}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Completed Stages</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-2xl font-bold text-orange-600">
+                      {projectStages.filter(s => !s.is_completed).length}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Remaining Stages</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div>
+                <h4 className="font-medium mb-4">TRL Progress Breakdown</h4>
+                <div className="space-y-3">
+                  {Array.from({ length: 9 }, (_, i) => {
+                    const level = i + 1;
+                    const stage = projectStages.find(s => s.trl_level === level);
+                    const isCompleted = stage?.is_completed || false;
+                    const isCurrent = level === selectedProject.current_trl_level;
+                    
+                    return (
+                      <div key={level} className={`flex items-center gap-4 p-3 rounded-lg border ${
+                        isCurrent ? 'border-primary bg-primary/5' : 
+                        isCompleted ? 'border-green-200 bg-green-50' : 
+                        'border-gray-200'
+                      }`}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
+                          isCompleted ? 'bg-green-500 text-white' :
+                          isCurrent ? 'bg-primary text-white' :
+                          'bg-gray-200 text-gray-600'
+                        }`}>
+                          {level}
+                        </div>
+                        <div className="flex-1">
+                          <p className="font-medium">{stage?.stage_name || `TRL Level ${level}`}</p>
+                          <p className="text-sm text-muted-foreground">{stage?.description}</p>
+                        </div>
+                        <div className="text-right">
+                          {isCompleted && stage?.completed_at && (
+                            <p className="text-xs text-green-600">
+                              {format(new Date(stage.completed_at), 'MMM dd, yyyy')}
+                            </p>
+                          )}
+                          {isCurrent && (
+                            <span className="text-xs bg-primary text-primary-foreground px-2 py-1 rounded">
+                              Current
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-medium mb-2">Completion Rate</h4>
+                <div className="w-full bg-muted rounded-full h-4">
+                  <div 
+                    className="bg-primary h-4 rounded-full transition-all duration-300 flex items-center justify-end pr-2"
+                    style={{ width: `${(selectedProject.current_trl_level / 9) * 100}%` }}
+                  >
+                    <span className="text-xs text-primary-foreground font-medium">
+                      {Math.round((selectedProject.current_trl_level / 9) * 100)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIsTrlAnalyticsOpen(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Progress Trend Dialog */}
+      <Dialog open={isProgressTrendOpen} onOpenChange={setIsProgressTrendOpen}>
+        <DialogContent className="sm:max-w-[900px] max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              Progress Trend Analysis
+            </DialogTitle>
+            <DialogDescription>
+              Timeline and trend analysis of project progression
+            </DialogDescription>
+          </DialogHeader>
+          {selectedProject && (
+            <div className="space-y-6 overflow-auto">
+              <div className="grid grid-cols-4 gap-4">
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-lg font-bold">
+                      {format(new Date(selectedProject.start_date), 'MMM yyyy')}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Project Started</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-lg font-bold">
+                      {Math.ceil((new Date().getTime() - new Date(selectedProject.start_date).getTime()) / (1000 * 60 * 60 * 24))} days
+                    </div>
+                    <p className="text-sm text-muted-foreground">Duration</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-lg font-bold text-green-600">
+                      {projectStages.filter(s => s.is_completed).length}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Milestones Hit</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="p-4">
+                    <div className="text-lg font-bold text-primary">
+                      {selectedProject.current_trl_level}
+                    </div>
+                    <p className="text-sm text-muted-foreground">Current TRL</p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div>
+                <h4 className="font-medium mb-4">Progress Timeline</h4>
+                <div className="relative">
+                  <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-border"></div>
+                  <div className="space-y-6">
+                    {/* Project Start */}
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                        <div className="w-6 h-6 rounded-full bg-blue-500"></div>
+                      </div>
+                      <div className="flex-1 pb-4">
+                        <div className="font-medium">Project Started</div>
+                        <div className="text-sm text-muted-foreground">
+                          {format(new Date(selectedProject.start_date), 'MMMM dd, yyyy')}
+                        </div>
+                        <div className="text-sm mt-1">Project initiation and TRL Level 1 achieved</div>
+                      </div>
+                    </div>
+
+                    {/* Completed stages */}
+                    {projectStages
+                      .filter(stage => stage.is_completed && stage.completed_at)
+                      .sort((a, b) => new Date(a.completed_at!).getTime() - new Date(b.completed_at!).getTime())
+                      .map((stage) => (
+                        <div key={stage.id} className="flex items-start gap-4">
+                          <div className="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                            <CheckCircle2 className="w-6 h-6 text-green-600" />
+                          </div>
+                          <div className="flex-1 pb-4">
+                            <div className="font-medium">TRL {stage.trl_level} Completed</div>
+                            <div className="text-sm text-muted-foreground">
+                              {format(new Date(stage.completed_at!), 'MMMM dd, yyyy')}
+                            </div>
+                            <div className="text-sm mt-1">{stage.stage_name}</div>
+                            {stage.notes && (
+                              <div className="text-sm text-muted-foreground mt-1 italic">
+                                "{stage.notes}"
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+
+                    {/* Current status if not completed */}
+                    {selectedProject.status !== 'completed' && (
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                          <Clock className="w-6 h-6 text-primary" />
+                        </div>
+                        <div className="flex-1 pb-4">
+                          <div className="font-medium">Current Status</div>
+                          <div className="text-sm text-muted-foreground">
+                            {format(new Date(), 'MMMM dd, yyyy')}
+                          </div>
+                          <div className="text-sm mt-1">
+                            Working on TRL Level {selectedProject.current_trl_level}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {selectedProject.expected_completion_date && (
+                <div className="bg-muted p-4 rounded-lg">
+                  <h4 className="font-medium mb-2">Project Projection</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Expected completion: {format(new Date(selectedProject.expected_completion_date), 'MMMM dd, yyyy')}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {selectedProject.status === 'completed' ? 
+                      'Project has been completed successfully.' :
+                      `${Math.ceil((new Date(selectedProject.expected_completion_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days remaining`
+                    }
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button onClick={() => setIsProgressTrendOpen(false)}>Close</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
