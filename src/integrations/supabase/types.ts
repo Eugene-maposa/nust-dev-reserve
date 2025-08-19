@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "13.0.4"
@@ -379,7 +379,7 @@ export type Database = {
         Returns: boolean
       }
       check_user_permission: {
-        Args: { p_user_id: string; p_permission: string }
+        Args: { p_permission: string; p_user_id: string }
         Returns: boolean
       }
       generate_password_reset_token: {
@@ -395,19 +395,19 @@ export type Database = {
         Returns: undefined
       }
       update_password_with_validation: {
-        Args: { user_email: string; new_password: string }
+        Args: { new_password: string; user_email: string }
         Returns: boolean
       }
       update_user_password: {
-        Args: { user_email: string; new_password: string }
+        Args: { new_password: string; user_email: string }
         Returns: undefined
       }
       update_user_role: {
-        Args: { p_user_id: string; p_new_role: string; p_permissions?: Json }
+        Args: { p_new_role: string; p_permissions?: Json; p_user_id: string }
         Returns: undefined
       }
       validate_password_reset_token: {
-        Args: { p_token: string; p_new_password: string }
+        Args: { p_new_password: string; p_token: string }
         Returns: boolean
       }
     }
