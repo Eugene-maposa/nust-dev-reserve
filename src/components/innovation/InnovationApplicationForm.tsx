@@ -40,6 +40,10 @@ interface FormData {
   proposedFunding: string;
   expectedDuration: string;
   resourcesNeeded: string;
+  receivedBy: string;
+  receivedDate: string;
+  designerSignature: string;
+  signatureDate: string;
 }
 
 const InnovationApplicationForm = () => {
@@ -76,7 +80,11 @@ const InnovationApplicationForm = () => {
     estimatedBudget: '',
     proposedFunding: '',
     expectedDuration: '',
-    resourcesNeeded: ''
+    resourcesNeeded: '',
+    receivedBy: '',
+    receivedDate: '',
+    designerSignature: '',
+    signatureDate: ''
   });
 
   const handleInputChange = (field: keyof FormData, value: string) => {
@@ -172,7 +180,11 @@ const InnovationApplicationForm = () => {
         estimatedBudget: '',
         proposedFunding: '',
         expectedDuration: '',
-        resourcesNeeded: ''
+        resourcesNeeded: '',
+        receivedBy: '',
+        receivedDate: '',
+        designerSignature: '',
+        signatureDate: ''
       });
     } catch (error) {
       console.error('Error submitting application:', error);
@@ -463,6 +475,21 @@ const InnovationApplicationForm = () => {
                   <SelectItem value="TRL 9">TRL 9: Actual system proven in operational environment</SelectItem>
                 </SelectContent>
               </Select>
+              
+              <div className="mt-4 p-4 bg-muted rounded-lg text-sm">
+                <h4 className="font-medium mb-2">Key: Technology Readiness Level (TRL)</h4>
+                <ul className="space-y-1 text-muted-foreground">
+                  <li><strong>TRL 1:</strong> Basic principles observed: The initial stage, where basic scientific research identifies the fundamental principles of a technology.</li>
+                  <li><strong>TRL 2:</strong> Technology concept formulated: A technology concept is formulated based on the initial research findings.</li>
+                  <li><strong>TRL 3:</strong> Experimental proof of concept: Experimental testing begins to validate the feasibility of the technology.</li>
+                  <li><strong>TRL 4:</strong> Technology validated in lab: The technology is tested in a controlled laboratory environment to assess its performance.</li>
+                  <li><strong>TRL 5:</strong> Technology validated in relevant environment: The technology is validated in a simulated relevant environment to assess its performance in a more realistic setting.</li>
+                  <li><strong>TRL 6:</strong> Technology prototype demonstrated in relevant environment: A prototype of the technology is demonstrated in a relevant environment.</li>
+                  <li><strong>TRL 7:</strong> System prototype demonstration in operational environment: A prototype of the technology is demonstrated in an operational environment to assess its performance under real-world conditions.</li>
+                  <li><strong>TRL 8:</strong> System complete and qualified: The technology is fully integrated and tested in a complex system, ensuring its reliability and readiness for use.</li>
+                  <li><strong>TRL 9:</strong> Actual system proven in operational environment: The technology is successfully deployed and proven in an operational environment.</li>
+                </ul>
+              </div>
             </div>
           </div>
 
@@ -543,6 +570,55 @@ const InnovationApplicationForm = () => {
                 rows={3}
                 placeholder="Describe what resources, equipment, or support you'll need..."
               />
+            </div>
+          </div>
+
+          {/* Administrative Section */}
+          <div className="space-y-6">
+            <h3 className="text-lg font-semibold border-b pb-2">Administrative Use</h3>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="receivedBy">Received by:</Label>
+                <Input
+                  id="receivedBy"
+                  value={formData.receivedBy}
+                  onChange={(e) => handleInputChange('receivedBy', e.target.value)}
+                  placeholder="Click or tap here to enter text."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="receivedDate">Date:</Label>
+                <Input
+                  id="receivedDate"
+                  type="date"
+                  value={formData.receivedDate}
+                  onChange={(e) => handleInputChange('receivedDate', e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="designerSignature">Designer/Innovator Signature:</Label>
+                <Input
+                  id="designerSignature"
+                  value={formData.designerSignature}
+                  onChange={(e) => handleInputChange('designerSignature', e.target.value)}
+                  placeholder="Click or tap here to enter text."
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="signatureDate">Date:</Label>
+                <Input
+                  id="signatureDate"
+                  type="date"
+                  value={formData.signatureDate}
+                  onChange={(e) => handleInputChange('signatureDate', e.target.value)}
+                />
+              </div>
             </div>
           </div>
 
