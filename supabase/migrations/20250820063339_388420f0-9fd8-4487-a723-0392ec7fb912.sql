@@ -1,0 +1,23 @@
+-- Add additional columns to innovation_hub_applications table for comprehensive NUST form
+ALTER TABLE public.innovation_hub_applications 
+ADD COLUMN title TEXT,
+ADD COLUMN organisation TEXT,
+ADD COLUMN position TEXT,
+ADD COLUMN faculty TEXT,
+ADD COLUMN department TEXT,
+ADD COLUMN supervisor TEXT,
+ADD COLUMN abstract TEXT,
+ADD COLUMN problem_statement TEXT,
+ADD COLUMN aim TEXT,
+ADD COLUMN project_strategy TEXT,
+ADD COLUMN expected_results TEXT,
+ADD COLUMN rationale TEXT,
+ADD COLUMN full_description TEXT,
+ADD COLUMN novelty_of_invention TEXT,
+ADD COLUMN stage_of_invention TEXT,
+ADD COLUMN trl_level TEXT,
+ADD COLUMN team_members_required TEXT,
+ADD COLUMN incubation_requirements TEXT,
+ADD COLUMN other_requirements TEXT,
+ADD COLUMN estimated_budget TEXT,
+ADD COLUMN proposed_funding TEXT;
