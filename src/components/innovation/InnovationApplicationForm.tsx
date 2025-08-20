@@ -4,18 +4,40 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface FormData {
+  title: string;
   fullName: string;
   email: string;
   phone: string;
   studentNumber: string;
+  organisation: string;
+  position: string;
+  faculty: string;
+  department: string;
+  supervisor: string;
   projectTitle: string;
+  abstract: string;
+  problemStatement: string;
+  aim: string;
+  projectStrategy: string;
   projectDescription: string;
+  expectedResults: string;
+  rationale: string;
+  fullDescription: string;
+  noveltyOfInvention: string;
+  stageOfInvention: string;
+  trlLevel: string;
   teamMembers: string;
+  teamMembersRequired: string;
+  incubationRequirements: string;
+  otherRequirements: string;
+  estimatedBudget: string;
+  proposedFunding: string;
   expectedDuration: string;
   resourcesNeeded: string;
 }
@@ -25,13 +47,34 @@ const InnovationApplicationForm = () => {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState<FormData>({
+    title: '',
     fullName: '',
     email: user?.email || '',
     phone: '',
     studentNumber: '',
+    organisation: '',
+    position: '',
+    faculty: '',
+    department: '',
+    supervisor: '',
     projectTitle: '',
+    abstract: '',
+    problemStatement: '',
+    aim: '',
+    projectStrategy: '',
     projectDescription: '',
+    expectedResults: '',
+    rationale: '',
+    fullDescription: '',
+    noveltyOfInvention: '',
+    stageOfInvention: '',
+    trlLevel: '',
     teamMembers: '',
+    teamMembersRequired: '',
+    incubationRequirements: '',
+    otherRequirements: '',
+    estimatedBudget: '',
+    proposedFunding: '',
     expectedDuration: '',
     resourcesNeeded: ''
   });
@@ -79,13 +122,34 @@ const InnovationApplicationForm = () => {
 
       // Reset form
       setFormData({
+        title: '',
         fullName: '',
         email: user?.email || '',
         phone: '',
         studentNumber: '',
+        organisation: '',
+        position: '',
+        faculty: '',
+        department: '',
+        supervisor: '',
         projectTitle: '',
+        abstract: '',
+        problemStatement: '',
+        aim: '',
+        projectStrategy: '',
         projectDescription: '',
+        expectedResults: '',
+        rationale: '',
+        fullDescription: '',
+        noveltyOfInvention: '',
+        stageOfInvention: '',
+        trlLevel: '',
         teamMembers: '',
+        teamMembersRequired: '',
+        incubationRequirements: '',
+        otherRequirements: '',
+        estimatedBudget: '',
+        proposedFunding: '',
         expectedDuration: '',
         resourcesNeeded: ''
       });
