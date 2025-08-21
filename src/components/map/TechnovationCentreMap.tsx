@@ -18,6 +18,7 @@ interface Room {
   capacity: number | null;
   description: string | null;
   status: string;
+  floor: number;
 }
 
 const TechnovationCentreMap = () => {
@@ -30,7 +31,8 @@ const TechnovationCentreMap = () => {
     type: '',
     capacity: '',
     description: '',
-    status: 'available'
+    status: 'available',
+    floor: '1'
   });
   
   const { toast } = useToast();
@@ -72,7 +74,8 @@ const TechnovationCentreMap = () => {
       type: formData.type,
       capacity: formData.capacity ? parseInt(formData.capacity) : null,
       description: formData.description || null,
-      status: formData.status
+      status: formData.status,
+      floor: parseInt(formData.floor)
     };
 
     if (editingRoom) {
@@ -144,7 +147,8 @@ const TechnovationCentreMap = () => {
       type: '',
       capacity: '',
       description: '',
-      status: 'available'
+      status: 'available',
+      floor: '1'
     });
     setEditingRoom(null);
     setIsDialogOpen(false);
@@ -157,17 +161,14 @@ const TechnovationCentreMap = () => {
       type: room.type,
       capacity: room.capacity?.toString() || '',
       description: room.description || '',
-      status: room.status
+      status: room.status,
+      floor: room.floor?.toString() || '1'
     });
     setIsDialogOpen(true);
   };
 
   const getRoomsByFloor = (floorNumber: string) => {
-    // For now, we'll simulate room distribution by floor
-    // In a real implementation, you'd have floor information in the database
-    const roomsPerFloor = Math.ceil(rooms.length / 3);
-    const startIndex = (parseInt(floorNumber) - 1) * roomsPerFloor;
-    return rooms.slice(startIndex, startIndex + roomsPerFloor);
+    return rooms.filter(room => room.floor === parseInt(floorNumber));
   };
 
   const getRoomColor = (type: string) => {
@@ -275,6 +276,19 @@ const TechnovationCentreMap = () => {
                           <SelectItem value="available">Available</SelectItem>
                           <SelectItem value="maintenance">Under Maintenance</SelectItem>
                           <SelectItem value="restricted">Restricted</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div>
+                      <Label htmlFor="floor">Floor</Label>
+                      <Select value={formData.floor} onValueChange={(value) => setFormData({ ...formData, floor: value })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Ground Floor</SelectItem>
+                          <SelectItem value="2">First Floor</SelectItem>
+                          <SelectItem value="3">Second Floor</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>

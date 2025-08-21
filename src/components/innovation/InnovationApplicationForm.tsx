@@ -202,7 +202,7 @@ const InnovationApplicationForm = () => {
     <Card className="w-full max-w-6xl mx-auto">
       <CardHeader className="text-center">
         <div className="flex items-center justify-center gap-4 mb-4">
-          <img src="/nust-logo.png" alt="NUST Logo" className="h-16 w-16 object-contain" />
+          <img src="/nust-logo.png" alt="NUST Logo" className="h-20 w-20 object-contain" />
           <div>
             <h2 className="text-xl font-bold">NATIONAL UNIVERSITY OF SCIENCE AND TECHNOLOGY</h2>
             <p className="text-sm text-muted-foreground">Innovation and Business Development</p>

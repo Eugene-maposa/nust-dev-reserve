@@ -139,6 +139,7 @@ export type Database = {
           approved_by: string | null
           created_at: string
           department: string | null
+          designer_signature: string | null
           email: string
           estimated_budget: string | null
           expected_duration: string | null
@@ -159,7 +160,10 @@ export type Database = {
           project_title: string
           proposed_funding: string | null
           rationale: string | null
+          received_by: string | null
+          received_date: string | null
           resources_needed: string | null
+          signature_date: string | null
           stage_of_invention: string | null
           status: string
           student_number: string | null
@@ -178,6 +182,7 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           department?: string | null
+          designer_signature?: string | null
           email: string
           estimated_budget?: string | null
           expected_duration?: string | null
@@ -198,7 +203,10 @@ export type Database = {
           project_title: string
           proposed_funding?: string | null
           rationale?: string | null
+          received_by?: string | null
+          received_date?: string | null
           resources_needed?: string | null
+          signature_date?: string | null
           stage_of_invention?: string | null
           status?: string
           student_number?: string | null
@@ -217,6 +225,7 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           department?: string | null
+          designer_signature?: string | null
           email?: string
           estimated_budget?: string | null
           expected_duration?: string | null
@@ -237,7 +246,10 @@ export type Database = {
           project_title?: string
           proposed_funding?: string | null
           rationale?: string | null
+          received_by?: string | null
+          received_date?: string | null
           resources_needed?: string | null
+          signature_date?: string | null
           stage_of_invention?: string | null
           status?: string
           student_number?: string | null
@@ -395,6 +407,7 @@ export type Database = {
         Row: {
           capacity: number | null
           description: string | null
+          floor: number
           id: string
           name: string
           status: string
@@ -403,6 +416,7 @@ export type Database = {
         Insert: {
           capacity?: number | null
           description?: string | null
+          floor?: number
           id?: string
           name: string
           status?: string
@@ -411,6 +425,7 @@ export type Database = {
         Update: {
           capacity?: number | null
           description?: string | null
+          floor?: number
           id?: string
           name?: string
           status?: string
