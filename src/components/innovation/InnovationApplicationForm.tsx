@@ -202,7 +202,7 @@ const InnovationApplicationForm = () => {
     <Card className="w-full max-w-6xl mx-auto">
       <CardHeader className="text-center">
         <div className="flex items-center justify-center gap-4 mb-4">
-          <img src="/NUST.jpg" alt="NUST Logo" className="h-16 w-16 object-contain" />
+          <img src="/nust-logo.png" alt="NUST Logo" className="h-16 w-16 object-contain" />
           <div>
             <h2 className="text-xl font-bold">NATIONAL UNIVERSITY OF SCIENCE AND TECHNOLOGY</h2>
             <p className="text-sm text-muted-foreground">Innovation and Business Development</p>
@@ -316,7 +316,7 @@ const InnovationApplicationForm = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="supervisor">Supervisor(s)</Label>
                 <Input
@@ -325,15 +325,15 @@ const InnovationApplicationForm = () => {
                   onChange={(e) => handleInputChange('supervisor', e.target.value)}
                 />
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="studentNumber">Student Number</Label>
-                <Input
-                  id="studentNumber"
-                  value={formData.studentNumber}
-                  onChange={(e) => handleInputChange('studentNumber', e.target.value)}
-                />
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="studentNumber">Student Number</Label>
+              <Input
+                id="studentNumber"
+                value={formData.studentNumber}
+                onChange={(e) => handleInputChange('studentNumber', e.target.value)}
+              />
             </div>
           </div>
 
