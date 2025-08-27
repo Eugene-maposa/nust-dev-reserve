@@ -133,56 +133,131 @@ export type Database = {
       }
       innovation_hub_applications: {
         Row: {
+          abstract: string | null
           admin_notes: string | null
+          aim: string | null
           approved_by: string | null
           created_at: string
+          department: string | null
+          designer_signature: string | null
           email: string
+          estimated_budget: string | null
           expected_duration: string | null
+          expected_results: string | null
+          faculty: string | null
+          full_description: string | null
           full_name: string
           id: string
+          incubation_requirements: string | null
+          novelty_of_invention: string | null
+          organisation: string | null
+          other_requirements: string | null
           phone: string | null
+          position: string | null
+          problem_statement: string | null
           project_description: string
+          project_strategy: string | null
           project_title: string
+          proposed_funding: string | null
+          rationale: string | null
+          received_by: string | null
+          received_date: string | null
           resources_needed: string | null
+          signature_date: string | null
+          stage_of_invention: string | null
           status: string
           student_number: string | null
+          supervisor: string | null
           team_members: string | null
+          team_members_required: string | null
+          title: string | null
+          trl_level: string | null
           updated_at: string
           user_id: string | null
         }
         Insert: {
+          abstract?: string | null
           admin_notes?: string | null
+          aim?: string | null
           approved_by?: string | null
           created_at?: string
+          department?: string | null
+          designer_signature?: string | null
           email: string
+          estimated_budget?: string | null
           expected_duration?: string | null
+          expected_results?: string | null
+          faculty?: string | null
+          full_description?: string | null
           full_name: string
           id?: string
+          incubation_requirements?: string | null
+          novelty_of_invention?: string | null
+          organisation?: string | null
+          other_requirements?: string | null
           phone?: string | null
+          position?: string | null
+          problem_statement?: string | null
           project_description: string
+          project_strategy?: string | null
           project_title: string
+          proposed_funding?: string | null
+          rationale?: string | null
+          received_by?: string | null
+          received_date?: string | null
           resources_needed?: string | null
+          signature_date?: string | null
+          stage_of_invention?: string | null
           status?: string
           student_number?: string | null
+          supervisor?: string | null
           team_members?: string | null
+          team_members_required?: string | null
+          title?: string | null
+          trl_level?: string | null
           updated_at?: string
           user_id?: string | null
         }
         Update: {
+          abstract?: string | null
           admin_notes?: string | null
+          aim?: string | null
           approved_by?: string | null
           created_at?: string
+          department?: string | null
+          designer_signature?: string | null
           email?: string
+          estimated_budget?: string | null
           expected_duration?: string | null
+          expected_results?: string | null
+          faculty?: string | null
+          full_description?: string | null
           full_name?: string
           id?: string
+          incubation_requirements?: string | null
+          novelty_of_invention?: string | null
+          organisation?: string | null
+          other_requirements?: string | null
           phone?: string | null
+          position?: string | null
+          problem_statement?: string | null
           project_description?: string
+          project_strategy?: string | null
           project_title?: string
+          proposed_funding?: string | null
+          rationale?: string | null
+          received_by?: string | null
+          received_date?: string | null
           resources_needed?: string | null
+          signature_date?: string | null
+          stage_of_invention?: string | null
           status?: string
           student_number?: string | null
+          supervisor?: string | null
           team_members?: string | null
+          team_members_required?: string | null
+          title?: string | null
+          trl_level?: string | null
           updated_at?: string
           user_id?: string | null
         }
@@ -332,6 +407,7 @@ export type Database = {
         Row: {
           capacity: number | null
           description: string | null
+          floor: number
           id: string
           name: string
           status: string
@@ -340,6 +416,7 @@ export type Database = {
         Insert: {
           capacity?: number | null
           description?: string | null
+          floor?: number
           id?: string
           name: string
           status?: string
@@ -348,6 +425,7 @@ export type Database = {
         Update: {
           capacity?: number | null
           description?: string | null
+          floor?: number
           id?: string
           name?: string
           status?: string

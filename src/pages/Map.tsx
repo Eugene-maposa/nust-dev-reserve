@@ -2,21 +2,21 @@
 import React from 'react';
 import Layout from '@/components/layout/Layout';
 import PageHeader from '@/components/ui/PageHeader';
-import CentreMap from '@/components/map/CentreMap';
+import TechnovationCentreMap from '@/components/map/TechnovationCentreMap';
 
 const Map = () => {
   return (
     <Layout>
       <PageHeader 
-        title="Centre Map" 
-        subtitle="Explore the layout of the Software Development Centre"
+        title="NUST Technovation Centre Map" 
+        subtitle="Explore the layout of the NUST Technovation Centre"
       />
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-5xl mx-auto">
-          <CentreMap />
+          <TechnovationCentreMap />
           
           <div className="mt-12 bg-gray-50 border rounded-lg p-6">
-            <h2 className="text-2xl font-bold mb-4 text-university-blue">Facility Information</h2>
+            <h2 className="text-2xl font-bold mb-4 text-university-blue">NUST Technovation Centre Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h3 className="text-lg font-semibold mb-2">Opening Hours</h3>
