@@ -293,6 +293,100 @@ export type Database = {
         }
         Relationships: []
       }
+      project_documents: {
+        Row: {
+          created_at: string
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id: string
+          project_id: string
+          updated_at: string
+          uploaded_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          file_name: string
+          file_path: string
+          file_size: number
+          file_type: string
+          id?: string
+          project_id: string
+          updated_at?: string
+          uploaded_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          file_name?: string
+          file_path?: string
+          file_size?: number
+          file_type?: string
+          id?: string
+          project_id?: string
+          updated_at?: string
+          uploaded_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_notifications: {
+        Row: {
+          channel: string
+          created_at: string
+          id: string
+          message: string
+          notification_type: string
+          project_id: string
+          sent_at: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel: string
+          created_at?: string
+          id?: string
+          message: string
+          notification_type: string
+          project_id: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          created_at?: string
+          id?: string
+          message?: string
+          notification_type?: string
+          project_id?: string
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_notifications_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       project_stages: {
         Row: {
           completed_at: string | null
@@ -359,6 +453,7 @@ export type Database = {
           description: string | null
           expected_completion_date: string | null
           id: string
+          impact_level: string
           start_date: string
           status: string
           title: string
@@ -373,6 +468,7 @@ export type Database = {
           description?: string | null
           expected_completion_date?: string | null
           id?: string
+          impact_level?: string
           start_date?: string
           status?: string
           title: string
@@ -387,6 +483,7 @@ export type Database = {
           description?: string | null
           expected_completion_date?: string | null
           id?: string
+          impact_level?: string
           start_date?: string
           status?: string
           title?: string
