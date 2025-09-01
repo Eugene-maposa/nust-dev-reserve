@@ -62,6 +62,16 @@ const Projects = () => {
     }
   };
 
+  const getImpactColor = (impactLevel: string) => {
+    switch (impactLevel) {
+      case 'very_high': return 'border-red-500 bg-red-50 text-red-700';
+      case 'high': return 'border-orange-500 bg-orange-50 text-orange-700';
+      case 'medium': return 'border-yellow-500 bg-yellow-50 text-yellow-700';
+      case 'low': return 'border-gray-500 bg-gray-50 text-gray-700';
+      default: return 'border-gray-500 bg-gray-50 text-gray-700';
+    }
+  };
+
   const getTRLProgress = (currentLevel: number) => {
     return (currentLevel / 9) * 100;
   };
@@ -125,7 +135,14 @@ const Projects = () => {
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {projects.map((project) => (
-              <Card key={project.id} className="hover:shadow-lg transition-shadow">
+              <Card 
+                key={project.id} 
+                className={`hover:shadow-lg transition-shadow ${
+                  project.impact_level === 'very_high' || project.impact_level === 'high' 
+                    ? 'ring-2 ring-orange-200' 
+                    : ''
+                }`}
+              >
                 <CardHeader>
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
@@ -134,9 +151,17 @@ const Projects = () => {
                         {project.description}
                       </CardDescription>
                     </div>
-                    <Badge className={`${getStatusColor(project.status)} text-white`}>
-                      {project.status}
-                    </Badge>
+                    <div className="flex flex-col gap-2">
+                      <Badge className={`${getStatusColor(project.status)} text-white`}>
+                        {project.status}
+                      </Badge>
+                      <Badge 
+                        variant="outline" 
+                        className={`text-xs ${getImpactColor(project.impact_level)}`}
+                      >
+                        {project.impact_level?.replace('_', ' ').toUpperCase()}
+                      </Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 

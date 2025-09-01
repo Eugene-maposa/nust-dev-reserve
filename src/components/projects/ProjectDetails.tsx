@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Calendar, CheckCircle, Circle, Edit, Save, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import DocumentUpload from '@/components/projects/DocumentUpload';
 
 interface ProjectDetailsProps {
   project: any;
@@ -143,6 +144,20 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onClose, onUpd
               </div>
               <div>
                 <span className="font-medium">Current TRL:</span> Level {project.current_trl_level}/9
+              </div>
+              <div>
+                <span className="font-medium">Impact Level:</span> 
+                <Badge 
+                  variant="outline" 
+                  className={`ml-2 ${
+                    project.impact_level === 'very_high' ? 'border-red-500 text-red-700' :
+                    project.impact_level === 'high' ? 'border-orange-500 text-orange-700' :
+                    project.impact_level === 'medium' ? 'border-yellow-500 text-yellow-700' :
+                    'border-gray-500 text-gray-700'
+                  }`}
+                >
+                  {project.impact_level?.replace('_', ' ').toUpperCase()}
+                </Badge>
               </div>
               <div className="flex items-center">
                 <Calendar className="mr-1 h-4 w-4" />
@@ -297,6 +312,9 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onClose, onUpd
             </div>
           </CardContent>
         </Card>
+
+        {/* Document Upload */}
+        <DocumentUpload projectId={project.id} />
       </div>
     </>
   );
