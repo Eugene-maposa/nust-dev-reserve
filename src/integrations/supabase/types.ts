@@ -607,8 +607,8 @@ export type Database = {
         Args: { user_email: string }
         Returns: string
       }
-      generate_user_code: {
-        Args: Record<PropertyKey, never>
+      generate_project_code: {
+        Args: { project_year: number; user_department: string }
         Returns: string
       }
       get_current_user_role: {

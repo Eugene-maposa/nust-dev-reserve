@@ -20,8 +20,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, Download, RefreshCw, FileText, Eye } from 'lucide-react';
+import { Search, Download, RefreshCw, FileText, Eye, Edit } from 'lucide-react';
 import { format } from 'date-fns';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 interface ComprehensiveUserData {
   code: string;
@@ -55,6 +56,9 @@ const ComprehensiveUserTable: React.FC = () => {
   const [filterDepartment, setFilterDepartment] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
   const [filterImpactLevel, setFilterImpactLevel] = useState('all');
+  const [selectedProject, setSelectedProject] = useState<{ id: string; title: string; impact_level: string } | null>(null);
+  const [isImpactDialogOpen, setIsImpactDialogOpen] = useState(false);
+  const [newImpactLevel, setNewImpactLevel] = useState('');
 
   useEffect(() => {
     fetchComprehensiveData();
@@ -266,6 +270,41 @@ const ComprehensiveUserTable: React.FC = () => {
     });
   };
 
+  const handleImpactLevelEdit = (projectId: string, projectTitle: string, currentImpactLevel: string) => {
+    setSelectedProject({ id: projectId, title: projectTitle, impact_level: currentImpactLevel });
+    setNewImpactLevel(currentImpactLevel);
+    setIsImpactDialogOpen(true);
+  };
+
+  const updateImpactLevel = async () => {
+    if (!selectedProject) return;
+
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ impact_level: newImpactLevel })
+        .eq('id', selectedProject.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Impact Level Updated",
+        description: `Project "${selectedProject.title}" impact level updated to ${newImpactLevel}`,
+      });
+
+      setIsImpactDialogOpen(false);
+      setSelectedProject(null);
+      fetchComprehensiveData(); // Refresh data
+    } catch (error) {
+      console.error('Error updating impact level:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update impact level",
+        variant: "destructive",
+      });
+    }
+  };
+
   const getImpactBadgeVariant = (level: string) => {
     switch (level) {
       case 'very high': return 'destructive';
@@ -425,9 +464,20 @@ const ComprehensiveUserTable: React.FC = () => {
                     </TableCell>
                     <TableCell>{row.award_category}</TableCell>
                     <TableCell>
-                      <Badge variant={getImpactBadgeVariant(row.impact_level)}>
-                        {row.impact_level}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={getImpactBadgeVariant(row.impact_level)}>
+                          {row.impact_level}
+                        </Badge>
+                        {row.project_id && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleImpactLevelEdit(row.project_id, row.project_title, row.impact_level)}
+                          >
+                            <Edit className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-center">
                       {row.idf_document ? (
@@ -477,6 +527,43 @@ const ComprehensiveUserTable: React.FC = () => {
             </TableBody>
           </Table>
         </div>
+
+        {/* Impact Level Edit Dialog */}
+        <Dialog open={isImpactDialogOpen} onOpenChange={setIsImpactDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Update Project Impact Level</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Project: {selectedProject?.title}</p>
+                <p className="text-sm text-muted-foreground">Current Impact: {selectedProject?.impact_level}</p>
+              </div>
+              <div>
+                <label className="text-sm font-medium">New Impact Level</label>
+                <Select value={newImpactLevel} onValueChange={setNewImpactLevel}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select impact level" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="very high">Very High</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsImpactDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={updateImpactLevel}>
+                  Update Impact Level
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </CardContent>
     </Card>
   );

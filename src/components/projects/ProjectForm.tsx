@@ -23,7 +23,6 @@ const projectSchema = z.object({
   category: z.string().min(1, 'Category is required'),
   current_trl_level: z.number().min(1).max(9),
   status: z.enum(['active', 'completed', 'paused', 'cancelled']),
-  impact_level: z.enum(['low', 'medium', 'high', 'very_high']),
   start_date: z.date(),
   expected_completion_date: z.date().optional(),
 });
@@ -47,7 +46,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
       category: project?.category || 'technology',
       current_trl_level: project?.current_trl_level || 1,
       status: project?.status || 'active',
-      impact_level: project?.impact_level || 'low',
       start_date: project?.start_date ? new Date(project.start_date) : new Date(),
       expected_completion_date: project?.expected_completion_date ? new Date(project.expected_completion_date) : undefined,
     },
@@ -61,7 +59,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
         category: data.category,
         current_trl_level: data.current_trl_level,
         status: data.status,
-        impact_level: data.impact_level,
+        impact_level: project?.impact_level || 'low', // Keep existing or default to low
         user_id: user?.id!,
         start_date: data.start_date.toISOString().split('T')[0],
         expected_completion_date: data.expected_completion_date 
@@ -122,8 +120,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
             body: {
               projectId: newProject.id,
               userId: user?.id,
-              notificationType: 'project_created',
-              message: `Your project "${data.title}" has been successfully created with ${data.impact_level} impact level.`
+             notificationType: 'project_created',
+              message: `Your project "${data.title}" has been successfully created. Impact level will be determined by administrators.`
             }
           });
         } catch (notificationError) {
@@ -256,29 +254,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
             )}
           />
 
-          <FormField
-            control={form.control}
-            name="impact_level"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Impact Level</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select impact level" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="very_high">Very High</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
 
           <div className="grid grid-cols-2 gap-4">
             <FormField
