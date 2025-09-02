@@ -446,46 +446,67 @@ export type Database = {
       }
       projects: {
         Row: {
+          award_category: string | null
+          budget_cost: number | null
           category: string
           completed_stages: Json
           created_at: string
           current_trl_level: number
+          department: string | null
           description: string | null
           expected_completion_date: string | null
           id: string
+          idf_document_url: string | null
           impact_level: string
+          mou_moa_document_url: string | null
+          patent_application_url: string | null
           start_date: string
           status: string
+          supervisor: string | null
           title: string
           updated_at: string
           user_id: string
         }
         Insert: {
+          award_category?: string | null
+          budget_cost?: number | null
           category?: string
           completed_stages?: Json
           created_at?: string
           current_trl_level?: number
+          department?: string | null
           description?: string | null
           expected_completion_date?: string | null
           id?: string
+          idf_document_url?: string | null
           impact_level?: string
+          mou_moa_document_url?: string | null
+          patent_application_url?: string | null
           start_date?: string
           status?: string
+          supervisor?: string | null
           title: string
           updated_at?: string
           user_id: string
         }
         Update: {
+          award_category?: string | null
+          budget_cost?: number | null
           category?: string
           completed_stages?: Json
           created_at?: string
           current_trl_level?: number
+          department?: string | null
           description?: string | null
           expected_completion_date?: string | null
           id?: string
+          idf_document_url?: string | null
           impact_level?: string
+          mou_moa_document_url?: string | null
+          patent_application_url?: string | null
           start_date?: string
           status?: string
+          supervisor?: string | null
           title?: string
           updated_at?: string
           user_id?: string
@@ -532,6 +553,7 @@ export type Database = {
       }
       user_profiles: {
         Row: {
+          code: string | null
           created_at: string
           email: string
           full_name: string | null
@@ -543,6 +565,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          code?: string | null
           created_at?: string
           email: string
           full_name?: string | null
@@ -554,6 +577,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          code?: string | null
           created_at?: string
           email?: string
           full_name?: string | null
@@ -581,6 +605,10 @@ export type Database = {
       }
       generate_password_reset_token: {
         Args: { user_email: string }
+        Returns: string
+      }
+      generate_user_code: {
+        Args: Record<PropertyKey, never>
         Returns: string
       }
       get_current_user_role: {

@@ -81,6 +81,7 @@ import { Label } from "@/components/ui/label";
 import { useNavigate } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
 import { format } from 'date-fns';
+import ComprehensiveUserTable from '@/components/admin/ComprehensiveUserTable';
 
 // Types
 interface User {
@@ -138,7 +139,7 @@ const Admin = () => {
   const [editedRoom, setEditedRoom] = useState<Room | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [activeTab, setActiveTab] = useState('bookings');
+  const [activeTab, setActiveTab] = useState('comprehensive');
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<{ id: string, type: 'user' | 'room' | 'booking' } | null>(null);
@@ -1169,9 +1170,10 @@ const Admin = () => {
           </Card>
         </div>
 
-        <Tabs defaultValue="bookings" className="space-y-4" onValueChange={setActiveTab}>
+        <Tabs defaultValue="comprehensive" className="space-y-4" onValueChange={setActiveTab}>
           <div className="flex justify-between items-center">
             <TabsList>
+              <TabsTrigger value="comprehensive">Comprehensive Data</TabsTrigger>
               <TabsTrigger value="bookings">Bookings</TabsTrigger>
               <TabsTrigger value="users">Users</TabsTrigger>
               <TabsTrigger value="resources">Resources</TabsTrigger>
@@ -1231,6 +1233,10 @@ const Admin = () => {
             </Card>
           ) : (
             <>
+              <TabsContent value="comprehensive" className="space-y-4">
+                <ComprehensiveUserTable />
+              </TabsContent>
+
               <TabsContent value="bookings" className="space-y-4">
                 <Card>
                   <CardContent className="p-6">
