@@ -24,7 +24,10 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ projectId }) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('project_documents')
-        .select('*')
+        .select(`
+          *,
+          commented_by_profile:user_profiles!project_documents_commented_by_fkey(full_name)
+        `)
         .eq('project_id', projectId)
         .order('uploaded_at', { ascending: false });
 

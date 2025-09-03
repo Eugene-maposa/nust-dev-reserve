@@ -295,6 +295,9 @@ export type Database = {
       }
       project_documents: {
         Row: {
+          admin_comments: string | null
+          comment_updated_at: string | null
+          commented_by: string | null
           created_at: string
           file_name: string
           file_path: string
@@ -307,6 +310,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          admin_comments?: string | null
+          comment_updated_at?: string | null
+          commented_by?: string | null
           created_at?: string
           file_name: string
           file_path: string
@@ -319,6 +325,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          admin_comments?: string | null
+          comment_updated_at?: string | null
+          commented_by?: string | null
           created_at?: string
           file_name?: string
           file_path?: string

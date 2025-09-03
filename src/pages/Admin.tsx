@@ -1174,6 +1174,7 @@ const Admin = () => {
           <div className="flex justify-between items-center">
             <TabsList>
               <TabsTrigger value="comprehensive">Comprehensive Data</TabsTrigger>
+              <TabsTrigger value="documents">Documents</TabsTrigger>
               <TabsTrigger value="bookings">Bookings</TabsTrigger>
               <TabsTrigger value="users">Users</TabsTrigger>
               <TabsTrigger value="resources">Resources</TabsTrigger>
