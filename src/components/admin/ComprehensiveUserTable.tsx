@@ -23,6 +23,8 @@ import {
 import { Search, Download, RefreshCw, FileText, Eye, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 interface ComprehensiveUserData {
   code: string;
@@ -59,6 +61,8 @@ const ComprehensiveUserTable: React.FC = () => {
   const [selectedProject, setSelectedProject] = useState<{ id: string; title: string; impact_level: string } | null>(null);
   const [isImpactDialogOpen, setIsImpactDialogOpen] = useState(false);
   const [newImpactLevel, setNewImpactLevel] = useState('');
+  const [editingRecord, setEditingRecord] = useState<ComprehensiveUserData | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchComprehensiveData();
@@ -270,6 +274,78 @@ const ComprehensiveUserTable: React.FC = () => {
     });
   };
 
+  const exportToPDF = () => {
+    const doc = new jsPDF('l', 'mm', 'a4'); // Landscape orientation
+    
+    doc.setFontSize(18);
+    doc.text('Comprehensive User & Project Data Report', 14, 22);
+    
+    doc.setFontSize(12);
+    doc.text(`Generated on: ${format(new Date(), 'dd/MM/yyyy HH:mm')}`, 14, 30);
+    doc.text(`Total Records: ${filteredData.length}`, 14, 36);
+
+    const headers = [
+      'Code', 'Name', 'Phone', 'Email', 'Student#',
+      'Project Title', 'Supervisor', 'Dept', 'TRL', 'Budget',
+      'Award', 'Impact', 'IDF', 'Hub', 'MOU', 'Patent', 'Docs'
+    ];
+
+    const rows = filteredData.map(row => [
+      row.code,
+      row.name,
+      row.phone,
+      row.email,
+      row.student_number,
+      row.project_title,
+      row.supervisor,
+      row.department,
+      row.trl.toString(),
+      row.budget_cost > 0 ? `$${row.budget_cost.toLocaleString()}` : 'N/A',
+      row.award_category,
+      row.impact_level,
+      row.idf_document ? 'Yes' : 'No',
+      row.innovation_hub_application ? 'Yes' : 'No',
+      row.mou_moa_document ? 'Yes' : 'No',
+      row.patent_application ? 'Yes' : 'No',
+      row.project_documentation.toString()
+    ]);
+
+    (doc as any).autoTable({
+      head: [headers],
+      body: rows,
+      startY: 45,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [41, 128, 185] },
+      columnStyles: {
+        0: { cellWidth: 15 }, // Code
+        1: { cellWidth: 20 }, // Name
+        2: { cellWidth: 18 }, // Phone
+        3: { cellWidth: 25 }, // Email
+        4: { cellWidth: 15 }, // Student#
+        5: { cellWidth: 25 }, // Project Title
+        6: { cellWidth: 20 }, // Supervisor
+        7: { cellWidth: 15 }, // Dept
+        8: { cellWidth: 8 },  // TRL
+        9: { cellWidth: 15 }, // Budget
+        10: { cellWidth: 15 }, // Award
+        11: { cellWidth: 12 }, // Impact
+        12: { cellWidth: 8 },  // IDF
+        13: { cellWidth: 8 },  // Hub
+        14: { cellWidth: 8 },  // MOU
+        15: { cellWidth: 8 },  // Patent
+        16: { cellWidth: 8 }   // Docs
+      },
+      margin: { left: 14, right: 14 }
+    });
+
+    doc.save(`comprehensive_user_data_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+
+    toast({
+      title: "Export Successful",
+      description: "Comprehensive user data exported to PDF file",
+    });
+  };
+
   const handleImpactLevelEdit = (projectId: string, projectTitle: string, currentImpactLevel: string) => {
     setSelectedProject({ id: projectId, title: projectTitle, impact_level: currentImpactLevel });
     setNewImpactLevel(currentImpactLevel);
@@ -300,6 +376,62 @@ const ComprehensiveUserTable: React.FC = () => {
       toast({
         title: "Error",
         description: "Failed to update impact level",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditRecord = (record: ComprehensiveUserData) => {
+    setEditingRecord({ ...record });
+    setIsEditDialogOpen(true);
+  };
+
+  const updateRecord = async () => {
+    if (!editingRecord) return;
+
+    try {
+      // Update user profile
+      const { error: userError } = await supabase
+        .from('user_profiles')
+        .update({
+          full_name: editingRecord.name,
+          phone: editingRecord.phone,
+          student_number: editingRecord.student_number
+        })
+        .eq('id', editingRecord.user_id);
+
+      if (userError) throw userError;
+
+      // Update project if it exists
+      if (editingRecord.project_id) {
+        const { error: projectError } = await supabase
+          .from('projects')
+          .update({
+            title: editingRecord.project_title,
+            supervisor: editingRecord.supervisor,
+            department: editingRecord.department,
+            budget_cost: editingRecord.budget_cost,
+            award_category: editingRecord.award_category,
+            impact_level: editingRecord.impact_level
+          })
+          .eq('id', editingRecord.project_id);
+
+        if (projectError) throw projectError;
+      }
+
+      toast({
+        title: "Record Updated",
+        description: "User and project information updated successfully",
+      });
+
+      setIsEditDialogOpen(false);
+      setEditingRecord(null);
+      fetchComprehensiveData(); // Refresh data
+    } catch (error) {
+      console.error('Error updating record:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update record",
         variant: "destructive",
       });
     }
@@ -363,6 +495,14 @@ const ComprehensiveUserTable: React.FC = () => {
             >
               <Download className="h-4 w-4 mr-2" />
               Export CSV
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportToPDF}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Export PDF
             </Button>
           </div>
         </CardTitle>
@@ -444,6 +584,7 @@ const ComprehensiveUserTable: React.FC = () => {
                 <TableHead className="min-w-[80px]">MOU/MOA</TableHead>
                 <TableHead className="min-w-[80px]">Patent App</TableHead>
                 <TableHead className="min-w-[80px]">Docs</TableHead>
+                <TableHead className="min-w-[80px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -512,11 +653,21 @@ const ComprehensiveUserTable: React.FC = () => {
                         {row.project_documentation}
                       </Badge>
                     </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditRecord(row)}
+                        className="h-8 w-8 p-0"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={17} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={18} className="text-center py-8 text-muted-foreground">
                     {searchQuery || filterDepartment !== 'all' || filterStatus !== 'all' || filterImpactLevel !== 'all'
                       ? 'No data matches your search criteria'
                       : 'No user or project data found'
@@ -561,6 +712,107 @@ const ComprehensiveUserTable: React.FC = () => {
                   Update Impact Level
                 </Button>
               </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Record Edit Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Edit Record</DialogTitle>
+            </DialogHeader>
+            {editingRecord && (
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Name</label>
+                  <Input
+                    value={editingRecord.name}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, name: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Phone</label>
+                  <Input
+                    value={editingRecord.phone}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, phone: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Student Number</label>
+                  <Input
+                    value={editingRecord.student_number}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, student_number: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Project Title</label>
+                  <Input
+                    value={editingRecord.project_title}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, project_title: e.target.value })}
+                    disabled={!editingRecord.project_id}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Supervisor</label>
+                  <Input
+                    value={editingRecord.supervisor}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, supervisor: e.target.value })}
+                    disabled={!editingRecord.project_id}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Department</label>
+                  <Input
+                    value={editingRecord.department}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, department: e.target.value })}
+                    disabled={!editingRecord.project_id}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Budget/Cost ($)</label>
+                  <Input
+                    type="number"
+                    value={editingRecord.budget_cost}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, budget_cost: Number(e.target.value) })}
+                    disabled={!editingRecord.project_id}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Award Category</label>
+                  <Input
+                    value={editingRecord.award_category}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, award_category: e.target.value })}
+                    disabled={!editingRecord.project_id}
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Impact Level</label>
+                  <Select 
+                    value={editingRecord.impact_level} 
+                    onValueChange={(value) => setEditingRecord({ ...editingRecord, impact_level: value })}
+                    disabled={!editingRecord.project_id}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="very high">Very High</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
+            <div className="flex justify-end gap-2 mt-6">
+              <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={updateRecord}>
+                Update Record
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

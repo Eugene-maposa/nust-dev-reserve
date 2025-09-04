@@ -82,6 +82,8 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from "@/integrations/supabase/client";
 import { format } from 'date-fns';
 import ComprehensiveUserTable from '@/components/admin/ComprehensiveUserTable';
+import BlogManager from '@/components/admin/BlogManager';
+import DocumentManager from '@/components/admin/DocumentManager';
 
 // Types
 interface User {
@@ -1175,6 +1177,7 @@ const Admin = () => {
             <TabsList>
               <TabsTrigger value="comprehensive">Comprehensive Data</TabsTrigger>
               <TabsTrigger value="documents">Documents</TabsTrigger>
+              <TabsTrigger value="blogs">Blog Management</TabsTrigger>
               <TabsTrigger value="bookings">Bookings</TabsTrigger>
               <TabsTrigger value="users">Users</TabsTrigger>
               <TabsTrigger value="resources">Resources</TabsTrigger>
@@ -1236,6 +1239,14 @@ const Admin = () => {
             <>
               <TabsContent value="comprehensive" className="space-y-4">
                 <ComprehensiveUserTable />
+              </TabsContent>
+
+              <TabsContent value="documents" className="space-y-4">
+                <DocumentManager />
+              </TabsContent>
+
+              <TabsContent value="blogs" className="space-y-4">
+                <BlogManager />
               </TabsContent>
 
               <TabsContent value="bookings" className="space-y-4">
