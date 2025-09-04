@@ -402,6 +402,16 @@ const ComprehensiveUserTable: React.FC = () => {
 
       if (userError) throw userError;
 
+      // Update user code if provided
+      if (editingRecord.code && editingRecord.code !== 'N/A') {
+        const { error: codeError } = await supabase
+          .from('user_profiles')
+          .update({ code: editingRecord.code })
+          .eq('id', editingRecord.user_id);
+
+        if (codeError) throw codeError;
+      }
+
       // Update project if it exists
       if (editingRecord.project_id) {
         const { error: projectError } = await supabase
@@ -803,6 +813,13 @@ const ComprehensiveUserTable: React.FC = () => {
                       <SelectItem value="very high">Very High</SelectItem>
                     </SelectContent>
                   </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium">Code</label>
+                  <Input
+                    value={editingRecord.code}
+                    onChange={(e) => setEditingRecord({ ...editingRecord, code: e.target.value })}
+                  />
                 </div>
               </div>
             )}

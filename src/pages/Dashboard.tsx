@@ -5,7 +5,7 @@ import Layout from '@/components/layout/Layout';
 import PageHeader from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, LogOut, Search } from 'lucide-react';
+import { Calendar, Clock, LogOut, Search, FileText } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -25,6 +25,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
+import UserDocumentManager from '@/components/projects/UserDocumentManager';
 
 interface Booking {
   id: string;
@@ -49,6 +50,7 @@ const Dashboard = () => {
   const [filterStatus, setFilterStatus] = useState('all');
   const [showBookings, setShowBookings] = useState(false);
   const [showResources, setShowResources] = useState(false);
+  const [showDocuments, setShowDocuments] = useState(false);
 
   // Fetch user bookings using React Query with the fixed foreign key relationship
   const { data: bookings = [], isLoading: isLoadingBookings } = useQuery({
@@ -243,6 +245,14 @@ const Dashboard = () => {
               >
                 {showResources ? 'Hide Available Resources' : 'View Available Resources'}
               </Button>
+              <Button 
+                variant="outline" 
+                className="w-full"
+                onClick={() => setShowDocuments(!showDocuments)}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                {showDocuments ? 'Hide Documents' : 'Manage Documents'}
+              </Button>
             </CardContent>
           </Card>
 
@@ -412,6 +422,14 @@ const Dashboard = () => {
                   {searchQuery || filterStatus !== 'all' ? 'No resources match your search criteria' : 'No resources found'}
                 </p>
               )}
+            </CardContent>
+          </Card>
+        )}
+
+        {showDocuments && (
+          <Card className="mt-6">
+            <CardContent className="p-6">
+              <UserDocumentManager />
             </CardContent>
           </Card>
         )}
