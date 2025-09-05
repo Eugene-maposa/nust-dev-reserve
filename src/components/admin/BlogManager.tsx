@@ -76,6 +76,7 @@ interface BlogFormData {
   image_url: string;
   published: boolean;
   author_id: string;
+  publisher: string;
 }
 
 const BlogManager: React.FC = () => {
@@ -94,7 +95,8 @@ const BlogManager: React.FC = () => {
     content: '',
     image_url: '',
     published: false,
-    author_id: ''
+    author_id: '',
+    publisher: ''
   });
 
   useEffect(() => {
@@ -176,15 +178,42 @@ const BlogManager: React.FC = () => {
       content: '',
       image_url: '',
       published: false,
-      author_id: ''
+      author_id: '',
+      publisher: ''
     });
   };
 
   const handleCreate = async () => {
     try {
+      // Check if we need to create an author first
+      let authorId = formData.author_id;
+      
+      if (!authorId && formData.publisher) {
+        // Create a new author for this publisher
+        const { data: newAuthor, error: authorError } = await supabase
+          .from('blog_authors')
+          .insert([{
+            name: formData.publisher,
+            avatar_initials: formData.publisher.substring(0, 2).toUpperCase(),
+            bio: `Admin author: ${formData.publisher}`
+          }])
+          .select()
+          .single();
+          
+        if (authorError) throw authorError;
+        authorId = newAuthor.id;
+      }
+      
+      if (!authorId) {
+        throw new Error('Author is required. Please select an author or enter a publisher name.');
+      }
+
       const { error } = await supabase
         .from('blog_posts')
-        .insert([formData]);
+        .insert([{
+          ...formData,
+          author_id: authorId
+        }]);
 
       if (error) throw error;
 
@@ -214,7 +243,8 @@ const BlogManager: React.FC = () => {
       content: post.content,
       image_url: post.image_url,
       published: post.published,
-      author_id: post.author_id
+      author_id: post.author_id,
+      publisher: post.author?.name || ''
     });
     setIsEditDialogOpen(true);
   };
@@ -393,6 +423,15 @@ const BlogManager: React.FC = () => {
                         ))}
                       </SelectContent>
                     </Select>
+                  </div>
+                  <div>
+                    <Label htmlFor="publisher">Or Enter Publisher Name</Label>
+                    <Input
+                      id="publisher"
+                      value={formData.publisher}
+                      onChange={(e) => setFormData({ ...formData, publisher: e.target.value })}
+                      placeholder="Enter publisher name (if no author selected)"
+                    />
                   </div>
                   <div className="flex items-center space-x-2">
                     <Switch
@@ -578,6 +617,15 @@ const BlogManager: React.FC = () => {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+              <div>
+                <Label htmlFor="edit-publisher">Publisher Name</Label>
+                <Input
+                  id="edit-publisher"
+                  value={formData.publisher}
+                  onChange={(e) => setFormData({ ...formData, publisher: e.target.value })}
+                  placeholder="Publisher name"
+                />
               </div>
               <div className="flex items-center space-x-2">
                 <Switch

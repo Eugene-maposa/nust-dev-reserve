@@ -24,7 +24,7 @@ import { Search, Download, RefreshCw, FileText, Eye, Edit } from 'lucide-react';
 import { format } from 'date-fns';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import jsPDF from 'jspdf';
-import 'jspdf-autotable';
+import autoTable from 'jspdf-autotable';
 
 interface ComprehensiveUserData {
   code: string;
@@ -310,7 +310,7 @@ const ComprehensiveUserTable: React.FC = () => {
       row.project_documentation.toString()
     ]);
 
-    (doc as any).autoTable({
+    autoTable(doc, {
       head: [headers],
       body: rows,
       startY: 45,
