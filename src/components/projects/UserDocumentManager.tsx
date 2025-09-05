@@ -47,6 +47,13 @@ const documentCategories: DocumentCategory[] = [
     description: 'General project documentation and reports',
     accepts: '.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png',
     maxFiles: 10
+  },
+  {
+    key: 'other_docs',
+    title: 'Other Documents',
+    description: 'Any other relevant documents not listed above',
+    accepts: '.pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.xls,.xlsx,.ppt,.pptx',
+    maxFiles: 15
   }
 ];
 
@@ -206,41 +213,41 @@ const UserDocumentManager: React.FC<UserDocumentManagerProps> = ({ projectId }) 
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">Document Management</h2>
+        <h3 className="text-lg font-semibold">Document Management</h3>
         <Badge variant="outline">
-          Total Documents: {documents.length}
+          Total: {documents.length}
         </Badge>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {documentCategories.map((category) => {
           const categoryDocs = getDocumentsByCategory(category.key);
           const isUploading = uploading === category.key;
 
           return (
-            <Card key={category.key}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span className="flex items-center gap-2">
-                    <FileText className="h-5 w-5" />
+            <Card key={category.key} className="h-fit">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center justify-between text-sm">
+                  <span className="flex items-center gap-1">
+                    <FileText className="h-4 w-4" />
                     {category.title}
                   </span>
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="text-xs">
                     {categoryDocs.length}/{category.maxFiles}
                   </Badge>
                 </CardTitle>
-                <p className="text-sm text-muted-foreground">{category.description}</p>
+                <p className="text-xs text-muted-foreground">{category.description}</p>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Upload Section */}
-                <div className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-4">
+              <CardContent className="space-y-3 pt-0">
+                {/* Upload Section - Compact */}
+                <div className="border-2 border-dashed border-muted-foreground/25 rounded-md p-2">
                   <div className="text-center">
-                    <Upload className="mx-auto h-8 w-8 text-muted-foreground" />
-                    <div className="mt-2">
+                    <Upload className="mx-auto h-5 w-5 text-muted-foreground" />
+                    <div className="mt-1">
                       <Label htmlFor={`file-upload-${category.key}`} className="cursor-pointer">
-                        <span className="text-sm font-medium text-primary hover:text-primary/80">
+                        <span className="text-xs font-medium text-primary hover:text-primary/80">
                           Upload documents
                         </span>
                         <Input
@@ -254,7 +261,7 @@ const UserDocumentManager: React.FC<UserDocumentManagerProps> = ({ projectId }) 
                         />
                       </Label>
                       <p className="text-xs text-muted-foreground mt-1">
-                        {category.accepts.replace(/\./g, '').toUpperCase()} up to 10MB each
+                        Max 10MB each
                       </p>
                     </div>
                   </div>
@@ -271,24 +278,24 @@ const UserDocumentManager: React.FC<UserDocumentManagerProps> = ({ projectId }) 
                   </div>
                 )}
 
-                {/* Documents List */}
+                {/* Documents List - Compact */}
                 {categoryDocs.length > 0 && (
-                  <div className="space-y-2">
-                    <h4 className="font-medium text-sm">Uploaded Documents</h4>
-                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                  <div className="space-y-1">
+                    <h4 className="font-medium text-xs">Documents ({categoryDocs.length})</h4>
+                    <div className="space-y-1 max-h-24 overflow-y-auto">
                       {categoryDocs.map((doc) => (
-                        <div key={doc.id} className="flex items-center justify-between p-2 border rounded-lg">
-                          <div className="flex items-center space-x-2 flex-1 min-w-0">
-                            <FileText className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+                        <div key={doc.id} className="flex items-center justify-between p-1 border rounded text-xs">
+                          <div className="flex items-center space-x-1 flex-1 min-w-0">
+                            <FileText className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                             <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium truncate">{doc.file_name}</p>
+                              <p className="font-medium truncate">{doc.file_name}</p>
                               <p className="text-xs text-muted-foreground">
-                                {formatFileSize(doc.file_size)} • {new Date(doc.uploaded_at).toLocaleDateString()}
+                                {formatFileSize(doc.file_size)}
                               </p>
                               {doc.admin_comments && (
-                                <div className="flex items-center gap-1 text-xs text-orange-600 mt-1">
-                                  <MessageCircle className="h-3 w-3" />
-                                  <span>Admin commented</span>
+                                <div className="flex items-center gap-1 text-xs text-orange-600">
+                                  <MessageCircle className="h-2 w-2" />
+                                  <span>Comment</span>
                                 </div>
                               )}
                             </div>
@@ -298,17 +305,17 @@ const UserDocumentManager: React.FC<UserDocumentManagerProps> = ({ projectId }) 
                               size="sm"
                               variant="outline"
                               onClick={() => handleDownload(doc)}
-                              className="h-8 w-8 p-0"
+                              className="h-6 w-6 p-0"
                             >
-                              <Download className="h-3 w-3" />
+                              <Download className="h-2 w-2" />
                             </Button>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() => handleDelete(doc.id, doc.file_path)}
-                              className="h-8 w-8 p-0"
+                              className="h-6 w-6 p-0"
                             >
-                              <X className="h-3 w-3" />
+                              <X className="h-2 w-2" />
                             </Button>
                           </div>
                         </div>
@@ -318,8 +325,8 @@ const UserDocumentManager: React.FC<UserDocumentManagerProps> = ({ projectId }) 
                 )}
 
                 {categoryDocs.length === 0 && (
-                  <p className="text-sm text-muted-foreground text-center py-4">
-                    No documents uploaded yet
+                  <p className="text-xs text-muted-foreground text-center py-2">
+                    No documents uploaded
                   </p>
                 )}
               </CardContent>
