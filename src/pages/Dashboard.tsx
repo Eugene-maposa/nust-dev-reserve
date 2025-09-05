@@ -220,6 +220,22 @@ const Dashboard = () => {
           </Card>
         </div>
 
+        {/* Document Management Section - Always Visible */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Required Document Management
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Upload and manage your project documents including MOU/MOA, Patent Applications, IDF, and Project Documentation
+            </p>
+          </CardHeader>
+          <CardContent>
+            <UserDocumentManager />
+          </CardContent>
+        </Card>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
             <CardHeader>
@@ -244,14 +260,6 @@ const Dashboard = () => {
                 onClick={() => setShowResources(!showResources)}
               >
                 {showResources ? 'Hide Available Resources' : 'View Available Resources'}
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full"
-                onClick={() => setShowDocuments(!showDocuments)}
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                {showDocuments ? 'Hide Documents' : 'Manage Documents'}
               </Button>
             </CardContent>
           </Card>
@@ -426,13 +434,6 @@ const Dashboard = () => {
           </Card>
         )}
 
-        {showDocuments && (
-          <Card className="mt-6">
-            <CardContent className="p-6">
-              <UserDocumentManager />
-            </CardContent>
-          </Card>
-        )}
       </div>
     </Layout>
   );
