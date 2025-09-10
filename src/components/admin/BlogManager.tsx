@@ -124,29 +124,42 @@ const BlogManager: React.FC = () => {
   };
 
   const fetchPosts = async () => {
-    const { data, error } = await supabase
-      .from('blog_posts')
-      .select(`
-        id, title, excerpt, content, image_url, published, created_at, updated_at, author_id
-      `)
-      .order('created_at', { ascending: false });
+    try {
+      // First fetch all posts (both published and unpublished for admin)
+      const { data: postsData, error: postsError } = await supabase
+        .from('blog_posts')
+        .select(`
+          id, title, excerpt, content, image_url, published, created_at, updated_at, author_id
+        `)
+        .order('created_at', { ascending: false });
 
-    if (error) throw error;
+      if (postsError) {
+        console.error('Error fetching posts:', postsError);
+        throw postsError;
+      }
 
-    // Fetch authors separately to avoid relation issues
-    const { data: authorsData, error: authorsError } = await supabase
-      .from('blog_authors')
-      .select('*');
+      // Fetch all authors
+      const { data: authorsData, error: authorsError } = await supabase
+        .from('blog_authors')
+        .select('*');
 
-    if (authorsError) throw authorsError;
+      if (authorsError) {
+        console.error('Error fetching authors:', authorsError);
+        throw authorsError;
+      }
 
-    // Map posts with authors
-    const postsWithAuthors = (data || []).map(post => ({
-      ...post,
-      author: authorsData?.find(author => author.id === post.author_id)
-    }));
+      // Map posts with their authors
+      const postsWithAuthors = (postsData || []).map(post => ({
+        ...post,
+        author: authorsData?.find(author => author.id === post.author_id)
+      }));
 
-    setPosts(postsWithAuthors as BlogPost[]);
+      console.log('Fetched posts:', postsWithAuthors);
+      setPosts(postsWithAuthors as BlogPost[]);
+    } catch (error) {
+      console.error('Error in fetchPosts:', error);
+      throw error;
+    }
   };
 
   const fetchAuthors = async () => {
@@ -189,25 +202,36 @@ const BlogManager: React.FC = () => {
       let authorId = formData.author_id;
       
       if (!authorId && formData.publisher) {
+        console.log('Creating new author for publisher:', formData.publisher);
         // Create a new author for this publisher
         const { data: newAuthor, error: authorError } = await supabase
           .from('blog_authors')
           .insert([{
             name: formData.publisher,
             avatar_initials: formData.publisher.substring(0, 2).toUpperCase(),
-            bio: `Admin author: ${formData.publisher}`
+            bio: `Admin author: ${formData.publisher}`,
+            user_id: null // This allows admin to create publisher authors
           }])
           .select()
           .single();
           
-        if (authorError) throw authorError;
+        if (authorError) {
+          console.error('Error creating author:', authorError);
+          throw authorError;
+        }
+        
         authorId = newAuthor.id;
+        console.log('Created new author with ID:', authorId);
+        
+        // Refresh authors list
+        await fetchAuthors();
       }
       
       if (!authorId) {
         throw new Error('Author is required. Please select an author or enter a publisher name.');
       }
 
+      console.log('Creating blog post with author ID:', authorId);
       const { error } = await supabase
         .from('blog_posts')
         .insert([{
@@ -219,7 +243,10 @@ const BlogManager: React.FC = () => {
           author_id: authorId
         }]);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error creating blog post:', error);
+        throw error;
+      }
 
       toast({
         title: "Post Created",
@@ -228,12 +255,12 @@ const BlogManager: React.FC = () => {
 
       setIsCreateDialogOpen(false);
       resetForm();
-      fetchPosts();
+      await fetchPosts();
     } catch (error) {
       console.error('Error creating post:', error);
       toast({
         title: "Error",
-        description: "Failed to create blog post",
+        description: error instanceof Error ? error.message : "Failed to create blog post",
         variant: "destructive",
       });
     }
