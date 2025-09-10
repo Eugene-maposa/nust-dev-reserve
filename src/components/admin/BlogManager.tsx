@@ -211,7 +211,11 @@ const BlogManager: React.FC = () => {
       const { error } = await supabase
         .from('blog_posts')
         .insert([{
-          ...formData,
+          title: formData.title,
+          excerpt: formData.excerpt,
+          content: formData.content,
+          image_url: formData.image_url,
+          published: formData.published,
           author_id: authorId
         }]);
 
@@ -255,7 +259,14 @@ const BlogManager: React.FC = () => {
     try {
       const { error } = await supabase
         .from('blog_posts')
-        .update(formData)
+        .update({
+          title: formData.title,
+          excerpt: formData.excerpt,
+          content: formData.content,
+          image_url: formData.image_url,
+          published: formData.published,
+          author_id: formData.author_id
+        })
         .eq('id', editingPost.id);
 
       if (error) throw error;
