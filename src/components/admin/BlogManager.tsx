@@ -41,7 +41,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { Search, Plus, Edit, Trash2, Eye, RefreshCw } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Eye, RefreshCw, Upload } from 'lucide-react';
 import { format } from 'date-fns';
 
 interface BlogPost {
@@ -98,6 +98,7 @@ const BlogManager: React.FC = () => {
     author_id: '',
     publisher: ''
   });
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
     fetchData();
@@ -194,6 +195,43 @@ const BlogManager: React.FC = () => {
       author_id: '',
       publisher: ''
     });
+  };
+
+  const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `blog-${Date.now()}.${fileExt}`;
+      const filePath = `blog-images/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('project-documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('project-documents')
+        .getPublicUrl(filePath);
+
+      setFormData({ ...formData, image_url: publicUrl });
+      toast({
+        title: "Image Uploaded",
+        description: "Image uploaded successfully",
+      });
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      toast({
+        title: "Upload Error",
+        description: "Failed to upload image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleCreate = async () => {
@@ -439,13 +477,21 @@ const BlogManager: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <Label htmlFor="image_url">Image URL</Label>
+                    <Label htmlFor="image_url">Image URL or Upload</Label>
                     <Input
                       id="image_url"
                       value={formData.image_url}
                       onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                      placeholder="Enter image URL"
+                      placeholder="Enter image URL or upload image"
                     />
+                    <div className="mt-2">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageUpload}
+                        className="text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
+                      />
+                    </div>
                   </div>
                   <div>
                     <Label htmlFor="author">Author</Label>

@@ -230,7 +230,7 @@ const ComprehensiveUserTable: React.FC = () => {
   const exportToCSV = () => {
     const headers = [
       'Code', 'Name', 'Phone No.', 'Email Address', 'Student Number',
-      'Project Title', 'Supervisor', 'Department', 'TRL', 'Budget/Cost ($)',
+      'Project Title', 'Supervisor', 'Department', 'Registration Year', 'TRL', 'Budget/Cost ($)',
       'Award Category', 'Impact Level', 'IDF Document', 'Innovation Hub Application',
       'MOU/MOA Document', 'Patent Application', 'Project Documentation Count'
     ];
@@ -246,6 +246,7 @@ const ComprehensiveUserTable: React.FC = () => {
         `"${row.project_title}"`,
         `"${row.supervisor}"`,
         `"${row.department}"`,
+        row.code ? row.code.split('-')[0] : 'N/A',
         row.trl,
         row.budget_cost,
         `"${row.award_category}"`,
@@ -286,7 +287,7 @@ const ComprehensiveUserTable: React.FC = () => {
 
     const headers = [
       'Code', 'Name', 'Phone', 'Email', 'Student#',
-      'Project Title', 'Supervisor', 'Dept', 'TRL', 'Budget',
+      'Project Title', 'Supervisor', 'Dept', 'Year', 'TRL', 'Budget',
       'Award', 'Impact', 'IDF', 'Hub', 'MOU', 'Patent', 'Docs'
     ];
 
@@ -299,6 +300,7 @@ const ComprehensiveUserTable: React.FC = () => {
       row.project_title,
       row.supervisor,
       row.department,
+      row.code ? row.code.split('-')[0] : 'N/A',
       row.trl.toString(),
       row.budget_cost > 0 ? `$${row.budget_cost.toLocaleString()}` : 'N/A',
       row.award_category,
@@ -325,15 +327,16 @@ const ComprehensiveUserTable: React.FC = () => {
         5: { cellWidth: 25 }, // Project Title
         6: { cellWidth: 20 }, // Supervisor
         7: { cellWidth: 15 }, // Dept
-        8: { cellWidth: 8 },  // TRL
-        9: { cellWidth: 15 }, // Budget
-        10: { cellWidth: 15 }, // Award
-        11: { cellWidth: 12 }, // Impact
-        12: { cellWidth: 8 },  // IDF
-        13: { cellWidth: 8 },  // Hub
-        14: { cellWidth: 8 },  // MOU
-        15: { cellWidth: 8 },  // Patent
-        16: { cellWidth: 8 }   // Docs
+        8: { cellWidth: 10 }, // Year
+        9: { cellWidth: 8 },  // TRL
+        10: { cellWidth: 15 }, // Budget
+        11: { cellWidth: 15 }, // Award
+        12: { cellWidth: 12 }, // Impact
+        13: { cellWidth: 8 },  // IDF
+        14: { cellWidth: 8 },  // Hub
+        15: { cellWidth: 8 },  // MOU
+        16: { cellWidth: 8 },  // Patent
+        17: { cellWidth: 8 }   // Docs
       },
       margin: { left: 14, right: 14 }
     });
