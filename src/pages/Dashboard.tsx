@@ -5,7 +5,7 @@ import Layout from '@/components/layout/Layout';
 import PageHeader from '@/components/ui/PageHeader';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Calendar, Clock, LogOut, Search, FileText } from 'lucide-react';
+import { Calendar, Clock, LogOut, Search, FileText, Target, Eye } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -26,6 +26,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import UserDocumentManager from '@/components/projects/UserDocumentManager';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 
 interface Booking {
   id: string;
@@ -129,6 +131,27 @@ const Dashboard = () => {
     },
   });
 
+  // Fetch user projects
+  const { data: projects = [], isLoading: isLoadingProjects } = useQuery({
+    queryKey: ['dashboard-projects', user?.id],
+    queryFn: async () => {
+      if (!user) return [];
+      
+      const { data, error } = await supabase
+        .from('projects')
+        .select(`
+          *,
+          project_stages (*)
+        `)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+  });
+
   // Filter bookings based on search query and status
   const filteredBookings = bookings.filter(booking =>
     booking.resource.toLowerCase().includes(searchQuery.toLowerCase()) &&
@@ -140,6 +163,20 @@ const Dashboard = () => {
     resource.name.toLowerCase().includes(searchQuery.toLowerCase()) &&
     (filterStatus === 'all' || resource.status === filterStatus)
   );
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-500';
+      case 'completed': return 'bg-blue-500';
+      case 'paused': return 'bg-yellow-500';
+      case 'cancelled': return 'bg-red-500';
+      default: return 'bg-gray-500';
+    }
+  };
+
+  const getTRLProgress = (currentLevel: number) => {
+    return (currentLevel / 9) * 100;
+  };
 
   if (isLoadingBookings) {
     return (
@@ -173,7 +210,22 @@ const Dashboard = () => {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Active Projects</CardTitle>
+              <Target className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">
+                {projects.filter(p => p.status === 'active').length}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {projects.filter(p => p.status === 'completed').length} completed
+              </p>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Active Bookings</CardTitle>
@@ -219,6 +271,82 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         </div>
+
+        {/* My Projects Section */}
+        <Card className="mb-6">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-5 w-5" />
+                My Projects
+              </CardTitle>
+              <p className="text-sm text-muted-foreground mt-1">
+                Track your innovation projects and TRL progress
+              </p>
+            </div>
+            <Link to="/projects">
+              <Button variant="outline">
+                View All Projects
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            {projects.length === 0 ? (
+              <div className="text-center py-12">
+                <Target className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No projects yet</h3>
+                <p className="text-muted-foreground mb-4">
+                  Start your innovation journey by creating your first project.
+                </p>
+                <Link to="/projects">
+                  <Button>
+                    <Target className="mr-2 h-4 w-4" />
+                    Create First Project
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {projects.slice(0, 3).map((project) => (
+                  <Card key={project.id} className="hover:shadow-lg transition-shadow">
+                    <CardHeader>
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <CardTitle className="text-base mb-1">{project.title}</CardTitle>
+                          <p className="text-sm text-muted-foreground line-clamp-2">
+                            {project.description}
+                          </p>
+                        </div>
+                        <Badge className={`${getStatusColor(project.status)} text-white ml-2`}>
+                          {project.status}
+                        </Badge>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        <div>
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-xs font-medium">TRL Progress</span>
+                            <span className="text-xs text-muted-foreground">
+                              Level {project.current_trl_level}/9
+                            </span>
+                          </div>
+                          <Progress value={getTRLProgress(project.current_trl_level)} className="h-2" />
+                        </div>
+                        <Link to="/projects">
+                          <Button size="sm" variant="outline" className="w-full">
+                            <Eye className="mr-1 h-4 w-4" />
+                            View Details
+                          </Button>
+                        </Link>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
