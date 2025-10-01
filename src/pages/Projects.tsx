@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -19,6 +20,7 @@ const Projects = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const { data: projects = [], isLoading, refetch } = useQuery({
     queryKey: ['projects', user?.id],
@@ -76,6 +78,12 @@ const Projects = () => {
     return (currentLevel / 9) * 100;
   };
 
+  // Filter projects based on status
+  const filteredProjects = projects.filter((project) => {
+    if (statusFilter === 'all') return true;
+    return project.status === statusFilter;
+  });
+
   if (isLoading) {
     return (
       <Layout>
@@ -93,10 +101,10 @@ const Projects = () => {
       
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-primary">My Projects</h2>
+          <h2 className="text-3xl font-bold">My Projects</h2>
           <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
             <DialogTrigger asChild>
-              <Button onClick={() => setEditingProject(null)}>
+              <Button onClick={() => setEditingProject(null)} className="bg-primary text-primary-foreground">
                 <Plus className="mr-2 h-4 w-4" />
                 New Project
               </Button>
@@ -118,23 +126,68 @@ const Projects = () => {
           </Dialog>
         </div>
 
-        {projects.length === 0 ? (
+        {/* Status Filter Tabs */}
+        <div className="mb-6">
+          <Tabs value={statusFilter} onValueChange={setStatusFilter}>
+            <TabsList className="bg-secondary">
+              <TabsTrigger 
+                value="active" 
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                Active
+              </TabsTrigger>
+              <TabsTrigger 
+                value="completed"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                Completed
+              </TabsTrigger>
+              <TabsTrigger 
+                value="paused"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                Paused
+              </TabsTrigger>
+              <TabsTrigger 
+                value="cancelled"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                Cancelled
+              </TabsTrigger>
+              <TabsTrigger 
+                value="all"
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                All
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {filteredProjects.length === 0 ? (
           <Card>
             <CardContent className="text-center py-12">
               <Target className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No projects yet</h3>
+              <h3 className="text-lg font-semibold mb-2">
+                {statusFilter === 'all' ? 'No projects yet' : `No ${statusFilter} projects`}
+              </h3>
               <p className="text-muted-foreground mb-4">
-                Start your innovation journey by creating your first project.
+                {statusFilter === 'all' 
+                  ? 'Start your innovation journey by creating your first project.'
+                  : `You don't have any ${statusFilter} projects at the moment.`
+                }
               </p>
-              <Button onClick={() => setIsFormOpen(true)}>
-                <Plus className="mr-2 h-4 w-4" />
-                Create First Project
-              </Button>
+              {statusFilter === 'all' && (
+                <Button onClick={() => setIsFormOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create First Project
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            {projects.map((project) => (
+            {filteredProjects.map((project) => (
               <Card 
                 key={project.id} 
                 className={`hover:shadow-lg transition-shadow ${
