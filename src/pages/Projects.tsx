@@ -31,7 +31,7 @@ const Projects = () => {
         .from('projects')
         .select(`
           *,
-          project_stages (*)
+          project_stages!project_stages_project_id_fkey (*)
         `)
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
