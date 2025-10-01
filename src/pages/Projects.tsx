@@ -25,6 +25,8 @@ const Projects = () => {
   const { data: projects = [], isLoading, refetch } = useQuery({
     queryKey: ['projects', user?.id],
     queryFn: async () => {
+      console.log('Fetching projects for user:', user?.id);
+      
       const { data, error } = await supabase
         .from('projects')
         .select(`
@@ -34,8 +36,14 @@ const Projects = () => {
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      return data;
+      if (error) {
+        console.error('Error fetching projects:', error);
+        toast.error('Failed to load projects');
+        throw error;
+      }
+      
+      console.log('Projects fetched successfully:', data);
+      return data || [];
     },
     enabled: !!user,
   });
