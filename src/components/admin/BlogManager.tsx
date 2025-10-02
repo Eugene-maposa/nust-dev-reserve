@@ -205,16 +205,16 @@ const BlogManager: React.FC = () => {
     try {
       const fileExt = file.name.split('.').pop();
       const fileName = `blog-${Date.now()}.${fileExt}`;
-      const filePath = `blog-images/${fileName}`;
+      const filePath = `${fileName}`;
 
       const { error: uploadError } = await supabase.storage
-        .from('project-documents')
+        .from('blog-images')
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
 
       const { data: { publicUrl } } = supabase.storage
-        .from('project-documents')
+        .from('blog-images')
         .getPublicUrl(filePath);
 
       setFormData({ ...formData, image_url: publicUrl });
