@@ -478,19 +478,40 @@ const BlogManager: React.FC = () => {
                   </div>
                   <div>
                     <Label htmlFor="image_url">Image URL or Upload</Label>
-                    <Input
-                      id="image_url"
-                      value={formData.image_url}
-                      onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                      placeholder="Enter image URL or upload image"
-                    />
-                    <div className="mt-2">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleImageUpload}
-                        className="text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
-                      />
+                    <div className="space-y-3">
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">Option 1: Paste an image URL</p>
+                        <Input
+                          id="image_url"
+                          value={formData.image_url}
+                          onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                          placeholder="https://example.com/image.jpg"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <p className="text-sm text-muted-foreground">Option 2: Upload an image file</p>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleImageUpload}
+                          disabled={uploadingImage}
+                          className="text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 disabled:opacity-50"
+                        />
+                        {uploadingImage && <p className="text-sm text-muted-foreground">Uploading image...</p>}
+                      </div>
+                      {formData.image_url && (
+                        <div className="mt-3">
+                          <p className="text-sm text-muted-foreground mb-2">Preview:</p>
+                          <img 
+                            src={formData.image_url} 
+                            alt="Blog preview" 
+                            className="w-full h-48 object-cover rounded-lg"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=2070';
+                            }}
+                          />
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div>
@@ -680,12 +701,42 @@ const BlogManager: React.FC = () => {
                 />
               </div>
               <div>
-                <Label htmlFor="edit-image">Image URL</Label>
-                <Input
-                  id="edit-image"
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                />
+                <Label htmlFor="edit-image">Blog Image</Label>
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Option 1: Paste an image URL</p>
+                    <Input
+                      id="edit-image"
+                      value={formData.image_url}
+                      onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                      placeholder="https://example.com/image.jpg"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm text-muted-foreground">Option 2: Upload an image file</p>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      disabled={uploadingImage}
+                      className="text-sm text-muted-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 disabled:opacity-50"
+                    />
+                    {uploadingImage && <p className="text-sm text-muted-foreground">Uploading image...</p>}
+                  </div>
+                  {formData.image_url && (
+                    <div className="mt-3">
+                      <p className="text-sm text-muted-foreground mb-2">Preview:</p>
+                      <img 
+                        src={formData.image_url} 
+                        alt="Blog preview" 
+                        className="w-full h-48 object-cover rounded-lg"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=2070';
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
               <div>
                 <Label htmlFor="edit-author">Author</Label>
