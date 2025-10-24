@@ -162,6 +162,124 @@ export type Database = {
         }
         Relationships: []
       }
+      project_documents: {
+        Row: {
+          created_at: string | null
+          file_name: string
+          file_path: string
+          file_type: string | null
+          id: string
+          project_id: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          file_name: string
+          file_path: string
+          file_type?: string | null
+          id?: string
+          project_id: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          file_name?: string
+          file_path?: string
+          file_type?: string | null
+          id?: string
+          project_id?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_documents_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      project_stages: {
+        Row: {
+          created_at: string | null
+          id: string
+          notes: string | null
+          project_id: string
+          stage_name: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          project_id: string
+          stage_name: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          notes?: string | null
+          project_id?: string
+          stage_name?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_stages_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          category: string | null
+          created_at: string | null
+          description: string | null
+          expected_completion_date: string | null
+          id: string
+          start_date: string | null
+          status: string | null
+          title: string
+          trl_level: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          expected_completion_date?: string | null
+          id?: string
+          start_date?: string | null
+          status?: string | null
+          title: string
+          trl_level?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          category?: string | null
+          created_at?: string | null
+          description?: string | null
+          expected_completion_date?: string | null
+          id?: string
+          start_date?: string | null
+          status?: string | null
+          title?: string
+          trl_level?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       rooms: {
         Row: {
           capacity: number | null
@@ -225,6 +343,27 @@ export type Database = {
         }
         Relationships: []
       }
+      user_roles: {
+        Row: {
+          created_at: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       USERS: {
         Row: {
           created_at: string
@@ -257,6 +396,13 @@ export type Database = {
         Args: { user_email: string }
         Returns: string
       }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
       reset_admin_password: {
         Args: { admin_email?: string; new_password?: string }
         Returns: undefined
@@ -279,7 +425,7 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "lecturer" | "student" | "staff" | "security"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -406,6 +552,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "lecturer", "student", "staff", "security"],
+    },
   },
 } as const
