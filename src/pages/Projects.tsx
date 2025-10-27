@@ -139,6 +139,12 @@ const Projects = () => {
           <Tabs value={statusFilter} onValueChange={setStatusFilter}>
             <TabsList className="bg-secondary">
               <TabsTrigger 
+                value="pending" 
+                className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
+              >
+                Pending
+              </TabsTrigger>
+              <TabsTrigger 
                 value="active" 
                 className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
               >
@@ -198,11 +204,7 @@ const Projects = () => {
             {filteredProjects.map((project) => (
               <Card 
                 key={project.id} 
-                className={`hover:shadow-lg transition-shadow ${
-                  project.impact_level === 'very_high' || project.impact_level === 'high' 
-                    ? 'ring-2 ring-orange-200' 
-                    : ''
-                }`}
+                className="hover:shadow-lg transition-shadow"
               >
                 <CardHeader>
                   <div className="flex justify-between items-start">
@@ -212,30 +214,22 @@ const Projects = () => {
                         {project.description}
                       </CardDescription>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <Badge className={`${getStatusColor(project.status)} text-white`}>
-                        {project.status}
-                      </Badge>
-                      <Badge 
-                        variant="outline" 
-                        className={`text-xs ${getImpactColor(project.impact_level)}`}
-                      >
-                        {project.impact_level?.replace('_', ' ').toUpperCase()}
-                      </Badge>
-                    </div>
+                    <Badge className={`${getStatusColor(project.status)} text-white`}>
+                      {project.status}
+                    </Badge>
                   </div>
                 </CardHeader>
                 
                 <CardContent>
                   <div className="space-y-4">
-                    <div>
+                     <div>
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-medium">TRL Progress</span>
+                        <span className="text-sm font-medium">TRL Level</span>
                         <span className="text-sm text-muted-foreground">
-                          Level {project.current_trl_level}/9
+                          Level {project.trl_level || 1}/9
                         </span>
                       </div>
-                      <Progress value={getTRLProgress(project.current_trl_level)} className="h-2" />
+                      <Progress value={getTRLProgress(project.trl_level || 1)} className="h-2" />
                     </div>
 
                     <div className="flex items-center text-sm text-muted-foreground">

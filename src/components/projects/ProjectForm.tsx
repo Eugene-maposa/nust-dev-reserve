@@ -21,8 +21,8 @@ const projectSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   category: z.string().min(1, 'Category is required'),
-  current_trl_level: z.number().min(1).max(9),
-  status: z.enum(['active', 'completed', 'paused', 'cancelled']),
+  trl_level: z.number().min(1).max(9),
+  status: z.enum(['pending', 'active', 'completed', 'paused', 'cancelled']).default('pending'),
   start_date: z.date(),
   expected_completion_date: z.date().optional(),
 });
@@ -44,8 +44,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
       title: project?.title || '',
       description: project?.description || '',
       category: project?.category || 'technology',
-      current_trl_level: project?.current_trl_level || 1,
-      status: project?.status || 'active',
+      trl_level: project?.trl_level || 1,
+      status: project?.status || 'pending',
       start_date: project?.start_date ? new Date(project.start_date) : new Date(),
       expected_completion_date: project?.expected_completion_date ? new Date(project.expected_completion_date) : undefined,
     },
@@ -57,9 +57,8 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
         title: data.title,
         description: data.description,
         category: data.category,
-        current_trl_level: data.current_trl_level,
+        trl_level: data.trl_level,
         status: data.status,
-        impact_level: project?.impact_level || 'low', // Keep existing or default to low
         user_id: user?.id!,
         start_date: data.start_date.toISOString().split('T')[0],
         expected_completion_date: data.expected_completion_date 
@@ -86,26 +85,19 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
 
         if (error) throw error;
 
-        // Create initial TRL stages for the project
-        const trlStages = [
-          { level: 1, name: 'Basic Principles Observed', description: 'Scientific research begins to be translated into applied research and development' },
-          { level: 2, name: 'Technology Concept Formulated', description: 'Invention begins, practical application is identified but is speculative' },
-          { level: 3, name: 'Experimental Proof of Concept', description: 'Active research and development is initiated, includes analytical studies' },
-          { level: 4, name: 'Technology Validated in Lab', description: 'Basic technological components are integrated to establish that they will work together' },
-          { level: 5, name: 'Technology Validated in Relevant Environment', description: 'Large scale components integrated and tested in realistic environment' },
-          { level: 6, name: 'Technology Demonstrated in Relevant Environment', description: 'Representative model or prototype system tested in relevant environment' },
-          { level: 7, name: 'System Prototype Demonstration', description: 'Prototype near or at planned operational system' },
-          { level: 8, name: 'System Complete and Qualified', description: 'Technology has been proven to work in its final form' },
-          { level: 9, name: 'Actual System Proven in Operational Environment', description: 'Actual application of technology in its final form' },
+        // Create initial project stages
+        const initialStages = [
+          { stage_name: 'Initiation', status: 'completed' },
+          { stage_name: 'Planning', status: 'pending' },
+          { stage_name: 'Execution', status: 'pending' },
+          { stage_name: 'Monitoring', status: 'pending' },
+          { stage_name: 'Completion', status: 'pending' }
         ];
 
-        const stagesData = trlStages.map(stage => ({
+        const stagesData = initialStages.map(stage => ({
           project_id: newProject.id,
-          trl_level: stage.level,
-          stage_name: stage.name,
-          description: stage.description,
-          is_completed: stage.level <= data.current_trl_level,
-          completed_at: stage.level <= data.current_trl_level ? new Date().toISOString() : null,
+          stage_name: stage.stage_name,
+          status: stage.status,
         }));
 
         const { error: stagesError } = await supabase
@@ -113,20 +105,6 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
           .insert(stagesData);
 
         if (stagesError) throw stagesError;
-
-        // Send project creation notification
-        try {
-          await supabase.functions.invoke('send-project-notifications', {
-            body: {
-              projectId: newProject.id,
-              userId: user?.id,
-             notificationType: 'project_created',
-              message: `Your project "${data.title}" has been successfully created. Impact level will be determined by administrators.`
-            }
-          });
-        } catch (notificationError) {
-          console.error('Failed to send notification:', notificationError);
-        }
 
         toast.success('Project created successfully');
       }
@@ -217,6 +195,7 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
                       <SelectItem value="active">Active</SelectItem>
                       <SelectItem value="completed">Completed</SelectItem>
                       <SelectItem value="paused">Paused</SelectItem>
@@ -231,10 +210,10 @@ const ProjectForm: React.FC<ProjectFormProps> = ({ project, onSuccess, onCancel 
 
           <FormField
             control={form.control}
-            name="current_trl_level"
+            name="trl_level"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Current TRL Level (1-9)</FormLabel>
+                <FormLabel>TRL Level (1-9)</FormLabel>
                 <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value?.toString()}>
                   <FormControl>
                     <SelectTrigger>

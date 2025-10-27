@@ -94,41 +94,43 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
   }, [toast]);
 
-  // Fetch user profile to determine role (simplified approach)
+  // Fetch user roles to determine permissions
   const fetchUserProfile = async (userId: string) => {
     try {
-      console.log('Fetching profile for user:', userId);
+      console.log('Fetching roles for user:', userId);
       
-      // Try to fetch the user profile - this should work with the simplified RLS
-      const { data: profile, error } = await supabase
-        .from('user_profiles')
-        .select('role, permissions')
-        .eq('id', userId)
-        .maybeSingle(); // Use maybeSingle to avoid errors if no profile exists
+      // Fetch user roles from the new user_roles table
+      const { data: roles, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
 
       if (error) {
-        console.error('Error fetching user profile:', error);
-        // Set default role if we can't fetch the profile
-        setUserRole('user');
+        console.error('Error fetching user roles:', error);
+        // Set default role if we can't fetch the roles
+        setUserRole('student');
         setIsAdmin(false);
         return;
       }
 
-      if (profile) {
-        console.log('Profile fetched successfully:', profile);
-        setUserRole(profile.role || 'user');
-        setIsAdmin(profile.role === 'admin');
+      if (roles && roles.length > 0) {
+        console.log('Roles fetched successfully:', roles);
+        // Check if user has admin role
+        const hasAdminRole = roles.some(r => r.role === 'admin');
+        setIsAdmin(hasAdminRole);
+        // Set primary role (admin takes precedence)
+        setUserRole(hasAdminRole ? 'admin' : roles[0].role);
       } else {
-        console.log('No profile found, setting default role');
-        // No profile exists yet, set default role
-        setUserRole('user');
+        console.log('No roles found, setting default role');
+        // No roles exist yet, set default role
+        setUserRole('student');
         setIsAdmin(false);
       }
       
     } catch (error) {
       console.error('Error in fetchUserProfile:', error);
       // Fallback to default role
-      setUserRole('user');
+      setUserRole('student');
       setIsAdmin(false);
     }
   };

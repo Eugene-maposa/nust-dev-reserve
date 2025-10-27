@@ -1,0 +1,255 @@
+-- Create user_roles table if it doesn't exist
+CREATE TABLE IF NOT EXISTS public.user_roles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    role app_role NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    UNIQUE (user_id, role)
+);
+
+-- Enable RLS on user_roles if not already enabled
+ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
+
+-- Create projects table
+CREATE TABLE IF NOT EXISTS public.projects (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    category TEXT,
+    status TEXT DEFAULT 'pending',
+    trl_level INTEGER,
+    start_date DATE,
+    expected_completion_date DATE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS on projects
+ALTER TABLE public.projects ENABLE ROW LEVEL SECURITY;
+
+-- Create project_stages table
+CREATE TABLE IF NOT EXISTS public.project_stages (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id UUID REFERENCES public.projects(id) ON DELETE CASCADE NOT NULL,
+    stage_name TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS on project_stages
+ALTER TABLE public.project_stages ENABLE ROW LEVEL SECURITY;
+
+-- Create project_documents table
+CREATE TABLE IF NOT EXISTS public.project_documents (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    project_id UUID REFERENCES public.projects(id) ON DELETE CASCADE NOT NULL,
+    file_name TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_type TEXT,
+    uploaded_by UUID REFERENCES auth.users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Enable RLS on project_documents
+ALTER TABLE public.project_documents ENABLE ROW LEVEL SECURITY;
+
+-- RLS policies for user_roles (only create if not exists)
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_roles' AND policyname = 'Users can view their own roles') THEN
+        CREATE POLICY "Users can view their own roles"
+        ON public.user_roles
+        FOR SELECT
+        USING (auth.uid() = user_id);
+    END IF;
+END $$;
+
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'user_roles' AND policyname = 'Admins can manage all roles') THEN
+        CREATE POLICY "Admins can manage all roles"
+        ON public.user_roles
+        FOR ALL
+        USING (public.has_role(auth.uid(), 'admin'));
+    END IF;
+END $$;
+
+-- RLS policies for projects
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'projects' AND policyname = 'Users can view their own projects') THEN
+        CREATE POLICY "Users can view their own projects"
+        ON public.projects
+        FOR SELECT
+        USING (auth.uid() = user_id);
+    END IF;
+END $$;
+
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'projects' AND policyname = 'Users can create their own projects') THEN
+        CREATE POLICY "Users can create their own projects"
+        ON public.projects
+        FOR INSERT
+        WITH CHECK (auth.uid() = user_id);
+    END IF;
+END $$;
+
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'projects' AND policyname = 'Users can update their own projects') THEN
+        CREATE POLICY "Users can update their own projects"
+        ON public.projects
+        FOR UPDATE
+        USING (auth.uid() = user_id);
+    END IF;
+END $$;
+
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'projects' AND policyname = 'Users can delete their own projects') THEN
+        CREATE POLICY "Users can delete their own projects"
+        ON public.projects
+        FOR DELETE
+        USING (auth.uid() = user_id);
+    END IF;
+END $$;
+
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'projects' AND policyname = 'Admins can view all projects') THEN
+        CREATE POLICY "Admins can view all projects"
+        ON public.projects
+        FOR SELECT
+        USING (public.has_role(auth.uid(), 'admin'));
+    END IF;
+END $$;
+
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'projects' AND policyname = 'Admins can manage all projects') THEN
+        CREATE POLICY "Admins can manage all projects"
+        ON public.projects
+        FOR ALL
+        USING (public.has_role(auth.uid(), 'admin'));
+    END IF;
+END $$;
+
+-- RLS policies for project_stages
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'project_stages' AND policyname = 'Users can view stages of their projects') THEN
+        CREATE POLICY "Users can view stages of their projects"
+        ON public.project_stages
+        FOR SELECT
+        USING (
+            EXISTS (
+                SELECT 1 FROM public.projects
+                WHERE projects.id = project_stages.project_id
+                AND projects.user_id = auth.uid()
+            )
+        );
+    END IF;
+END $$;
+
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'project_stages' AND policyname = 'Users can manage stages of their projects') THEN
+        CREATE POLICY "Users can manage stages of their projects"
+        ON public.project_stages
+        FOR ALL
+        USING (
+            EXISTS (
+                SELECT 1 FROM public.projects
+                WHERE projects.id = project_stages.project_id
+                AND projects.user_id = auth.uid()
+            )
+        );
+    END IF;
+END $$;
+
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'project_stages' AND policyname = 'Admins can view all project stages') THEN
+        CREATE POLICY "Admins can view all project stages"
+        ON public.project_stages
+        FOR SELECT
+        USING (public.has_role(auth.uid(), 'admin'));
+    END IF;
+END $$;
+
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'project_stages' AND policyname = 'Admins can manage all project stages') THEN
+        CREATE POLICY "Admins can manage all project stages"
+        ON public.project_stages
+        FOR ALL
+        USING (public.has_role(auth.uid(), 'admin'));
+    END IF;
+END $$;
+
+-- RLS policies for project_documents
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'project_documents' AND policyname = 'Users can view documents of their projects') THEN
+        CREATE POLICY "Users can view documents of their projects"
+        ON public.project_documents
+        FOR SELECT
+        USING (
+            EXISTS (
+                SELECT 1 FROM public.projects
+                WHERE projects.id = project_documents.project_id
+                AND projects.user_id = auth.uid()
+            )
+        );
+    END IF;
+END $$;
+
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'project_documents' AND policyname = 'Users can manage documents of their projects') THEN
+        CREATE POLICY "Users can manage documents of their projects"
+        ON public.project_documents
+        FOR ALL
+        USING (
+            EXISTS (
+                SELECT 1 FROM public.projects
+                WHERE projects.id = project_documents.project_id
+                AND projects.user_id = auth.uid()
+            )
+        );
+    END IF;
+END $$;
+
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'project_documents' AND policyname = 'Admins can view all documents') THEN
+        CREATE POLICY "Admins can view all documents"
+        ON public.project_documents
+        FOR SELECT
+        USING (public.has_role(auth.uid(), 'admin'));
+    END IF;
+END $$;
+
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'project_documents' AND policyname = 'Admins can manage all documents') THEN
+        CREATE POLICY "Admins can manage all documents"
+        ON public.project_documents
+        FOR ALL
+        USING (public.has_role(auth.uid(), 'admin'));
+    END IF;
+END $$;
+
+-- Create triggers for updated_at if not exists
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_projects_updated_at') THEN
+        CREATE TRIGGER update_projects_updated_at
+        BEFORE UPDATE ON public.projects
+        FOR EACH ROW
+        EXECUTE FUNCTION public.update_updated_at_column();
+    END IF;
+END $$;
+
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'update_project_stages_updated_at') THEN
+        CREATE TRIGGER update_project_stages_updated_at
+        BEFORE UPDATE ON public.project_stages
+        FOR EACH ROW
+        EXECUTE FUNCTION public.update_updated_at_column();
+    END IF;
+END $$;
+
+-- Make checkchirasha@gmail.com an admin
+INSERT INTO public.user_roles (user_id, role)
+SELECT id, 'admin'::app_role
+FROM auth.users
+WHERE email = 'checkchirasha@gmail.com'
+ON CONFLICT (user_id, role) DO NOTHING;
