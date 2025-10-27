@@ -84,29 +84,20 @@ const ComprehensiveUserTable: React.FC = () => {
           full_name,
           phone,
           email,
-          student_number,
-          projects (
-            id,
-            title,
-            supervisor,
-            department,
-            current_trl_level,
-            budget_cost,
-            award_category,
-            impact_level,
-            status,
-            idf_document_url,
-            mou_moa_document_url,
-            patent_application_url
-          )
+          student_number
         `);
 
       if (error) throw error;
 
+      // Fetch all projects (with only existing fields)
+      const { data: allProjects, error: projectsError } = await supabase
+        .from('projects')
+        .select('*');
+
+      if (projectsError) throw projectsError;
+
       // Fetch project documents count for each project
-      const projectIds = usersWithProjects
-        ?.flatMap(user => user.projects?.map(p => p.id) || [])
-        .filter(Boolean) || [];
+      const projectIds = allProjects?.map(p => p.id) || [];
 
       const { data: documentsCount, error: docsError } = await supabase
         .from('project_documents')
@@ -126,8 +117,9 @@ const ComprehensiveUserTable: React.FC = () => {
       const comprehensiveData: ComprehensiveUserData[] = [];
 
       usersWithProjects?.forEach(user => {
-        if (user.projects && user.projects.length > 0) {
-          user.projects.forEach(project => {
+        const userProjects = allProjects?.filter(p => p.user_id === user.id) || [];
+        if (userProjects.length > 0) {
+          userProjects.forEach(project => {
             const docsCount = documentsCount?.filter(doc => doc.project_id === project.id).length || 0;
             const hubApp = hubApplications?.find(app => app.user_id === user.id);
 
@@ -140,13 +132,13 @@ const ComprehensiveUserTable: React.FC = () => {
               project_title: project.title,
               supervisor: project.supervisor || 'N/A',
               department: project.department || 'N/A',
-              trl: project.current_trl_level,
+              trl: project.trl_level,
               budget_cost: project.budget_cost || 0,
               award_category: project.award_category || 'N/A',
-              impact_level: project.impact_level,
-              idf_document: !!project.idf_document_url,
+              impact_level: 'N/A', // Impact level not in schema
+              idf_document: false, // Field doesn't exist
               innovation_hub_application: !!hubApp,
-              mou_moa_document: !!project.mou_moa_document_url,
+              mou_moa_document: false, // Field doesn't exist
               patent_application: !!project.patent_application_url,
               project_documentation: docsCount,
               user_id: user.id,
@@ -359,12 +351,13 @@ const ComprehensiveUserTable: React.FC = () => {
     if (!selectedProject) return;
 
     try {
-      const { error } = await supabase
-        .from('projects')
-        .update({ impact_level: newImpactLevel })
-        .eq('id', selectedProject.id);
-
-      if (error) throw error;
+      // Impact level field doesn't exist in schema - skip update
+      toast({
+        title: "Feature Unavailable",
+        description: "Impact level updates are not currently available.",
+        variant: "destructive",
+      });
+      return;
 
       toast({
         title: "Impact Level Updated",

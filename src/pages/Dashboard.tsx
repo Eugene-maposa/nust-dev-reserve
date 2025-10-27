@@ -328,10 +328,10 @@ const Dashboard = () => {
                           <div className="flex justify-between items-center mb-1">
                             <span className="text-xs font-medium">TRL Progress</span>
                             <span className="text-xs text-muted-foreground">
-                              Level {project.current_trl_level}/9
+                              Level {project.trl_level}/9
                             </span>
                           </div>
-                          <Progress value={getTRLProgress(project.current_trl_level)} className="h-2" />
+                          <Progress value={getTRLProgress(project.trl_level)} className="h-2" />
                         </div>
                         <Link to="/projects">
                           <Button size="sm" variant="outline" className="w-full">

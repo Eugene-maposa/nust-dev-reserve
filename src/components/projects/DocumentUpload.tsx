@@ -208,7 +208,7 @@ const DocumentUpload: React.FC<DocumentUploadProps> = ({ projectId }) => {
                     <div>
                       <p className="text-sm font-medium">{doc.file_name}</p>
                       <p className="text-xs text-muted-foreground">
-                        {formatFileSize(doc.file_size)} • {new Date(doc.uploaded_at).toLocaleDateString()}
+                        {doc.file_size ? formatFileSize(doc.file_size) + ' • ' : ''}{new Date(doc.created_at).toLocaleDateString()}
                       </p>
                     </div>
                   </div>

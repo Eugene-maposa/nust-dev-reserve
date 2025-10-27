@@ -124,6 +124,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "bookings_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "fk_bookings_room"
             columns: ["room_id"]
             isOneToOne: false
@@ -131,6 +138,69 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      innovation_hub_applications: {
+        Row: {
+          created_at: string | null
+          department: string | null
+          email: string
+          faculty: string | null
+          full_name: string
+          id: string
+          innovation_type: string | null
+          organisation: string | null
+          phone: string | null
+          position: string | null
+          project_description: string | null
+          status: string | null
+          student_number: string | null
+          target_market: string | null
+          team_members: string | null
+          title: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          department?: string | null
+          email: string
+          faculty?: string | null
+          full_name: string
+          id?: string
+          innovation_type?: string | null
+          organisation?: string | null
+          phone?: string | null
+          position?: string | null
+          project_description?: string | null
+          status?: string | null
+          student_number?: string | null
+          target_market?: string | null
+          team_members?: string | null
+          title: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          department?: string | null
+          email?: string
+          faculty?: string | null
+          full_name?: string
+          id?: string
+          innovation_type?: string | null
+          organisation?: string | null
+          phone?: string | null
+          position?: string | null
+          project_description?: string | null
+          status?: string | null
+          student_number?: string | null
+          target_market?: string | null
+          team_members?: string | null
+          title?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
       }
       password_reset_tokens: {
         Row: {
@@ -164,27 +234,33 @@ export type Database = {
       }
       project_documents: {
         Row: {
+          admin_comments: string | null
           created_at: string | null
           file_name: string
           file_path: string
+          file_size: number | null
           file_type: string | null
           id: string
           project_id: string
           uploaded_by: string | null
         }
         Insert: {
+          admin_comments?: string | null
           created_at?: string | null
           file_name: string
           file_path: string
+          file_size?: number | null
           file_type?: string | null
           id?: string
           project_id: string
           uploaded_by?: string | null
         }
         Update: {
+          admin_comments?: string | null
           created_at?: string | null
           file_name?: string
           file_path?: string
+          file_size?: number | null
           file_type?: string | null
           id?: string
           project_id?: string
@@ -240,39 +316,54 @@ export type Database = {
       }
       projects: {
         Row: {
+          award_category: string | null
+          budget_cost: number | null
           category: string | null
           created_at: string | null
+          department: string | null
           description: string | null
           expected_completion_date: string | null
           id: string
+          patent_application_url: string | null
           start_date: string | null
           status: string | null
+          supervisor: string | null
           title: string
           trl_level: number | null
           updated_at: string | null
           user_id: string
         }
         Insert: {
+          award_category?: string | null
+          budget_cost?: number | null
           category?: string | null
           created_at?: string | null
+          department?: string | null
           description?: string | null
           expected_completion_date?: string | null
           id?: string
+          patent_application_url?: string | null
           start_date?: string | null
           status?: string | null
+          supervisor?: string | null
           title: string
           trl_level?: number | null
           updated_at?: string | null
           user_id: string
         }
         Update: {
+          award_category?: string | null
+          budget_cost?: number | null
           category?: string | null
           created_at?: string | null
+          department?: string | null
           description?: string | null
           expected_completion_date?: string | null
           id?: string
+          patent_application_url?: string | null
           start_date?: string | null
           status?: string | null
+          supervisor?: string | null
           title?: string
           trl_level?: number | null
           updated_at?: string | null
@@ -284,6 +375,7 @@ export type Database = {
         Row: {
           capacity: number | null
           description: string | null
+          floor: number | null
           id: string
           name: string
           status: string
@@ -292,6 +384,7 @@ export type Database = {
         Insert: {
           capacity?: number | null
           description?: string | null
+          floor?: number | null
           id?: string
           name: string
           status?: string
@@ -300,6 +393,7 @@ export type Database = {
         Update: {
           capacity?: number | null
           description?: string | null
+          floor?: number | null
           id?: string
           name?: string
           status?: string
@@ -309,6 +403,7 @@ export type Database = {
       }
       user_profiles: {
         Row: {
+          code: string | null
           created_at: string
           email: string
           full_name: string | null
@@ -320,6 +415,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          code?: string | null
           created_at?: string
           email: string
           full_name?: string | null
@@ -331,6 +427,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          code?: string | null
           created_at?: string
           email?: string
           full_name?: string | null

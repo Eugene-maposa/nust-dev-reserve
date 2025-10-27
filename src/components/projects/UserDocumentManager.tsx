@@ -73,14 +73,14 @@ const UserDocumentManager: React.FC<UserDocumentManagerProps> = ({ projectId }) 
       
       let query = supabase
         .from('project_documents')
-        .select('*')
-        .eq('user_id', user.id);
+        .select('id, file_name, file_path, file_type, file_size, admin_comments, created_at, project_id, uploaded_by')
+        .eq('uploaded_by', user.id);
 
       if (projectId) {
         query = query.eq('project_id', projectId);
       }
 
-      const { data, error } = await query.order('uploaded_at', { ascending: false });
+      const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) throw error;
       return data || [];
@@ -290,7 +290,7 @@ const UserDocumentManager: React.FC<UserDocumentManagerProps> = ({ projectId }) 
                             <div className="min-w-0 flex-1">
                               <p className="font-medium truncate">{doc.file_name}</p>
                               <p className="text-xs text-muted-foreground">
-                                {formatFileSize(doc.file_size)}
+                                {doc.file_size ? formatFileSize(doc.file_size) : 'Unknown size'}
                               </p>
                               {doc.admin_comments && (
                                 <div className="flex items-center gap-1 text-xs text-orange-600">
@@ -354,8 +354,7 @@ const UserDocumentManager: React.FC<UserDocumentManagerProps> = ({ projectId }) 
                       <div>
                         <h4 className="font-medium text-sm">{doc.file_name}</h4>
                         <p className="text-xs text-muted-foreground mb-2">
-                          Comment by Admin • 
-                          {doc.comment_updated_at ? new Date(doc.comment_updated_at).toLocaleDateString() : 'N/A'}
+                          Comment by Admin • {new Date(doc.created_at).toLocaleDateString()}
                         </p>
                         <p className="text-sm">{doc.admin_comments}</p>
                       </div>

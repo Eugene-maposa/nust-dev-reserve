@@ -54,10 +54,10 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onClose, onUpd
       // First, check if stage exists
       const { data: existingStage } = await supabase
         .from('project_stages')
-        .select('*')
+        .select('id, notes, status')
         .eq('project_id', project.id)
-        .eq('trl_level', trlLevel)
-        .single();
+        .eq('stage_name', `TRL ${trlLevel}`)
+        .maybeSingle();
 
       if (existingStage) {
         // Update existing stage
@@ -67,7 +67,6 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onClose, onUpd
             is_completed: isCompleted,
             completed_at: isCompleted ? new Date().toISOString() : null,
             notes: stageNotes || existingStage.notes,
-            evidence_url: evidenceUrl || existingStage.evidence_url,
           })
           .eq('id', existingStage.id);
 
@@ -96,7 +95,7 @@ const ProjectDetails: React.FC<ProjectDetailsProps> = ({ project, onClose, onUpd
         const { error: projectError } = await supabase
           .from('projects')
           .update({
-            current_trl_level: Math.max(project.current_trl_level, trlLevel),
+            trl_level: Math.max(project.trl_level, trlLevel),
           })
           .eq('id', project.id);
 
