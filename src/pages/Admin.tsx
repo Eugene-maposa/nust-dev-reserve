@@ -304,17 +304,18 @@ const Admin = () => {
         return;
       }
 
-      // Check if user is admin
-      const { data: profile, error: profileError } = await supabase
-        .from('user_profiles')
+      // Check if user has admin role using user_roles table
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
         .select('role')
-        .eq('id', session.user.id)
-        .single();
+        .eq('user_id', session.user.id)
+        .eq('role', 'admin');
 
-      if (profileError || !profile || profile.role !== 'admin') {
+      if (rolesError || !roles || roles.length === 0) {
+        console.error("Admin check error:", rolesError);
         toast({
           title: "Access Denied",
-          description: "You don't have permission to access the admin dashboard",
+          description: "You don't have admin permission to access this dashboard",
           variant: "destructive",
         });
         navigate('/dashboard');
@@ -384,29 +385,26 @@ const Admin = () => {
 
   const fetchBookings = async () => {
     try {
-      // Join bookings with rooms and user_profiles to get names using specific foreign key relationships
-      const { data, error } = await supabase
+      // Fetch bookings without foreign key hints
+      const { data: bookingsData, error } = await supabase
         .from('bookings')
-        .select(`
-          id,
-          user_id,
-          date,
-          time_slot,
-          purpose,
-          status,
-          created_at,
-          rooms!fk_bookings_rooms(id, name),
-          user_profiles!fk_bookings_user_profiles(full_name, email)
-        `);
+        .select('*');
 
       if (error) throw error;
 
-      // Map the joined data to our Booking interface
-      const mappedBookings = data.map((booking: any) => {
+      // Fetch rooms and user profiles separately
+      const { data: rooms } = await supabase.from('rooms').select('id, name');
+      const { data: profiles } = await supabase.from('user_profiles').select('id, full_name, email');
+
+      // Map the data manually
+      const mappedBookings = bookingsData?.map((booking: any) => {
+        const room = rooms?.find(r => r.id === booking.room_id);
+        const profile = profiles?.find(p => p.id === booking.user_id);
+        
         return {
           id: booking.id,
-          room_name: booking.rooms ? booking.rooms.name : 'Unknown Room',
-          user_name: booking.user_profiles ? booking.user_profiles.full_name || booking.user_profiles.email : 'Unknown User',
+          room_name: room?.name || 'Unknown Room',
+          user_name: profile?.full_name || profile?.email || 'Unknown User',
           user_id: booking.user_id,
           date: booking.date,
           time_slot: booking.time_slot,
@@ -416,7 +414,7 @@ const Admin = () => {
         };
       });
 
-      setBookings(mappedBookings);
+      setBookings(mappedBookings || []);
     } catch (error) {
       console.error("Error fetching bookings:", error);
       throw error;
@@ -449,16 +447,29 @@ const Admin = () => {
 
   const fetchProjects = async () => {
     try {
+      // Fetch projects without the foreign key relationship
       const { data: projectsData, error } = await supabase
         .from('projects')
-        .select(`
-          *,
-          user_profiles!inner(full_name, email)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
       
       if (error) throw error;
-      setProjects(projectsData || []);
+
+      // Fetch user profiles separately and join in code
+      const { data: profiles } = await supabase
+        .from('user_profiles')
+        .select('id, full_name, email');
+
+      // Combine the data
+      const enrichedProjects = projectsData?.map(project => {
+        const userProfile = profiles?.find(p => p.id === project.user_id);
+        return {
+          ...project,
+          user_profiles: userProfile || { full_name: 'Unknown', email: 'N/A' }
+        };
+      });
+      
+      setProjects(enrichedProjects || []);
     } catch (error) {
       console.error('Error fetching projects:', error);
       throw error;
