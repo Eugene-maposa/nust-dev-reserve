@@ -45,6 +45,12 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = () => {
       const { data, error } = await signIn(email, password);
 
       if (error) {
+        // Provide more helpful error messages
+        if (error.message?.includes('Invalid login credentials')) {
+          throw new Error('Invalid email or password. If you just registered, please verify your email first by clicking the link sent to your inbox.');
+        } else if (error.message?.includes('Email not confirmed')) {
+          throw new Error('Please verify your email before logging in. Check your inbox for the verification link.');
+        }
         throw error;
       }
 
@@ -69,6 +75,7 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = () => {
         title: "Login failed",
         description: error.message || "Invalid email or password",
         variant: "destructive",
+        duration: 10000,
       });
     } finally {
       setIsLoading(false);
@@ -108,22 +115,41 @@ const EmailLoginForm: React.FC<EmailLoginFormProps> = () => {
       const { data, error } = await signUp(email, password);
 
       if (error) {
+        // Handle duplicate user registration
+        if (error.message?.includes('already registered') || error.message?.includes('User already registered')) {
+          throw new Error('This email is already registered. Please sign in or use the "Forgot password?" option.');
+        }
         throw error;
       }
 
-      toast({
-        title: "Registration successful",
-        description: "Your account has been created. Please check your email to verify your account.",
-      });
+      // Check if email confirmation is required
+      if (data?.user && !data.session) {
+        toast({
+          title: "Verify your email",
+          description: "A verification link has been sent to your email. Please click the link to verify your account before logging in.",
+          duration: 15000,
+        });
+      } else {
+        toast({
+          title: "Registration successful",
+          description: "Your account has been created. You can now log in.",
+          duration: 8000,
+        });
+      }
       
-      // Switch back to login mode
+      // Switch back to login mode and clear form
       setRegisterMode(false);
+      setEmail('');
+      setPassword('');
+      setConfirmPassword('');
+      
     } catch (error: any) {
       console.error('Registration error:', error);
       toast({
         title: "Registration failed",
         description: error.message || "An error occurred during registration",
         variant: "destructive",
+        duration: 10000,
       });
     } finally {
       setIsLoading(false);
