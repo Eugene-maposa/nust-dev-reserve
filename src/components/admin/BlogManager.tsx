@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
+import { seedBlogData } from '@/utils/seedBlogData';
 import {
   Table,
   TableBody,
@@ -89,6 +90,7 @@ const BlogManager: React.FC = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
+  const [isSeeding, setIsSeeding] = useState(false);
   const [formData, setFormData] = useState<BlogFormData>({
     title: '',
     excerpt: '',
@@ -98,6 +100,31 @@ const BlogManager: React.FC = () => {
     author_id: '',
     publisher: ''
   });
+
+  const handleSeedData = async () => {
+    setIsSeeding(true);
+    try {
+      const result = await seedBlogData();
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: `Successfully seeded ${result.count} blog posts`,
+        });
+        await fetchData(); // Refresh the list
+      } else {
+        throw new Error('Seeding failed');
+      }
+    } catch (error) {
+      console.error('Error seeding blog data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to seed blog data. Posts may already exist.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSeeding(false);
+    }
+  };
   const [uploadingImage, setUploadingImage] = useState(false);
 
   useEffect(() => {
@@ -434,6 +461,15 @@ const BlogManager: React.FC = () => {
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               Refresh
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSeedData}
+              disabled={isSeeding}
+            >
+              <Upload className={`h-4 w-4 mr-2 ${isSeeding ? 'animate-pulse' : ''}`} />
+              {isSeeding ? 'Seeding...' : 'Seed Blog Data'}
             </Button>
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
               <DialogTrigger asChild>
