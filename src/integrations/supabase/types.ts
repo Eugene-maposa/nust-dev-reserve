@@ -86,6 +86,13 @@ export type Database = {
             referencedRelation: "blog_authors"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "fk_blog_posts_author"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "blog_authors"
+            referencedColumns: ["id"]
+          },
         ]
       }
       bookings: {
