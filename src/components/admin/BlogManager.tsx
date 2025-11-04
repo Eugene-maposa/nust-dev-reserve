@@ -349,7 +349,8 @@ const BlogManager: React.FC = () => {
     if (!editingPost) return;
 
     try {
-      const { error } = await supabase
+      // Update blog post
+      const { error: postError } = await supabase
         .from('blog_posts')
         .update({
           title: formData.title,
@@ -361,7 +362,18 @@ const BlogManager: React.FC = () => {
         })
         .eq('id', editingPost.id);
 
-      if (error) throw error;
+      if (postError) throw postError;
+
+      // Update author info if author_id is set
+      if (formData.author_id && formData.publisher) {
+        await supabase
+          .from('blog_authors')
+          .update({
+            name: formData.publisher,
+            avatar_initials: formData.publisher.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+          })
+          .eq('id', formData.author_id);
+      }
 
       toast({
         title: "Post Updated",
@@ -371,7 +383,7 @@ const BlogManager: React.FC = () => {
       setIsEditDialogOpen(false);
       setEditingPost(null);
       resetForm();
-      fetchPosts();
+      await fetchPosts();
     } catch (error) {
       console.error('Error updating post:', error);
       toast({

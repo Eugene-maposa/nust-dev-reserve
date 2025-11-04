@@ -176,28 +176,41 @@ export const seedBlogData = async () => {
       }
     }
 
-    // Now insert blog posts
-    const postsToInsert = blogPostsData.map(post => ({
-      title: post.title,
-      excerpt: post.excerpt,
-      content: post.content,
-      image_url: post.image_url,
-      author_id: authorIds[post.author.name],
-      published: true,
-      created_at: post.created_at,
-    }));
+    // Now insert blog posts, checking for existing ones
+    let insertedCount = 0;
+    
+    for (const post of blogPostsData) {
+      // Check if post with this title already exists
+      const { data: existingPost } = await supabase
+        .from('blog_posts')
+        .select('id, title')
+        .eq('title', post.title)
+        .maybeSingle();
 
-    const { data, error } = await supabase
-      .from('blog_posts')
-      .insert(postsToInsert)
-      .select();
+      if (!existingPost) {
+        // Insert new post
+        const { error } = await supabase
+          .from('blog_posts')
+          .insert({
+            title: post.title,
+            excerpt: post.excerpt,
+            content: post.content,
+            image_url: post.image_url,
+            author_id: authorIds[post.author.name],
+            published: true,
+            created_at: post.created_at,
+          });
 
-    if (error) {
-      console.error('Error inserting blog posts:', error);
-      throw error;
+        if (error) {
+          console.error('Error inserting blog post:', error);
+          // Continue with other posts even if one fails
+        } else {
+          insertedCount++;
+        }
+      }
     }
 
-    return { success: true, count: data?.length || 0 };
+    return { success: true, count: insertedCount };
   } catch (error) {
     console.error('Error seeding blog data:', error);
     return { success: false, error };
