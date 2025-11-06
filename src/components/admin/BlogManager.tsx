@@ -717,11 +717,11 @@ const BlogManager: React.FC = () => {
 
         {/* Edit Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-3xl">
+          <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Edit Blog Post</DialogTitle>
             </DialogHeader>
-            <div className="grid gap-4">
+            <div className="grid gap-4 py-4">
               <div>
                 <Label htmlFor="edit-title">Title</Label>
                 <Input
