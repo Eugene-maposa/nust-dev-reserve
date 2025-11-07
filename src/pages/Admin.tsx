@@ -497,13 +497,13 @@ const Admin = () => {
         .from('project_stages')
         .select('*')
         .eq('project_id', projectId)
-        .order('trl_level', { ascending: true });
+        .order('created_at', { ascending: true });
       
       if (error) throw error;
       setProjectStages(data || []);
     } catch (error) {
       console.error('Error fetching project stages:', error);
-      throw error;
+      setProjectStages([]);
     }
   };
 
