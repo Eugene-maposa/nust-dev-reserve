@@ -237,6 +237,14 @@ const Admin = () => {
 
   const handleApproveApplication = async (applicationId: string) => {
     try {
+      const { data: application, error: fetchError } = await supabase
+        .from('innovation_hub_applications')
+        .select('user_id')
+        .eq('id', applicationId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase
         .from('innovation_hub_applications')
         .update({ 
@@ -247,9 +255,23 @@ const Admin = () => {
 
       if (error) throw error;
 
+      // Send approval notification email
+      try {
+        await supabase.functions.invoke('send-innovation-notifications', {
+          body: {
+            applicationId,
+            userId: application.user_id,
+            notificationType: 'approved',
+          },
+        });
+        console.log('Approval notification email sent');
+      } catch (emailError) {
+        console.error('Error sending notification email:', emailError);
+      }
+
       toast({
         title: "Application Approved",
-        description: "The Innovation Hub application has been approved."
+        description: "Application approved and notification sent to user."
       });
 
       fetchHubApplications();
@@ -264,8 +286,16 @@ const Admin = () => {
     }
   };
 
-  const handleRejectApplication = async (applicationId: string) => {
+  const handleRejectApplication = async (applicationId: string, reviewComments?: string) => {
     try {
+      const { data: application, error: fetchError } = await supabase
+        .from('innovation_hub_applications')
+        .select('user_id')
+        .eq('id', applicationId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
       const { error } = await supabase
         .from('innovation_hub_applications')
         .update({ status: 'rejected' })
@@ -273,9 +303,24 @@ const Admin = () => {
 
       if (error) throw error;
 
+      // Send rejection notification email
+      try {
+        await supabase.functions.invoke('send-innovation-notifications', {
+          body: {
+            applicationId,
+            userId: application.user_id,
+            notificationType: 'rejected',
+            reviewComments: reviewComments || 'Your application did not meet the requirements at this time.',
+          },
+        });
+        console.log('Rejection notification email sent');
+      } catch (emailError) {
+        console.error('Error sending notification email:', emailError);
+      }
+
       toast({
         title: "Application Rejected",
-        description: "The Innovation Hub application has been rejected."
+        description: "Application rejected and notification sent to user."
       });
 
       fetchHubApplications();
@@ -285,6 +330,55 @@ const Admin = () => {
       toast({
         title: "Error",
         description: "Failed to reject application. Please try again.",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleRequestReview = async (applicationId: string, reviewComments: string) => {
+    try {
+      const { data: application, error: fetchError } = await supabase
+        .from('innovation_hub_applications')
+        .select('user_id')
+        .eq('id', applicationId)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      const { error } = await supabase
+        .from('innovation_hub_applications')
+        .update({ status: 'review_needed' })
+        .eq('id', applicationId);
+
+      if (error) throw error;
+
+      // Send review needed notification email
+      try {
+        await supabase.functions.invoke('send-innovation-notifications', {
+          body: {
+            applicationId,
+            userId: application.user_id,
+            notificationType: 'review_needed',
+            reviewComments,
+          },
+        });
+        console.log('Review request notification email sent');
+      } catch (emailError) {
+        console.error('Error sending notification email:', emailError);
+      }
+
+      toast({
+        title: "Review Requested",
+        description: "User has been notified about required changes."
+      });
+
+      fetchHubApplications();
+      updateStats();
+    } catch (error) {
+      console.error('Error requesting review:', error);
+      toast({
+        title: "Error",
+        description: "Failed to request review. Please try again.",
         variant: "destructive"
       });
     }
@@ -2580,9 +2674,22 @@ const Admin = () => {
             {selectedApplication?.status === 'pending' && (
               <>
                 <Button 
+                  variant="outline"
+                  onClick={() => {
+                    const comments = prompt('Enter review comments (what needs to be changed/added):');
+                    if (comments) {
+                      handleRequestReview(selectedApplication.id, comments);
+                      setIsApplicationDetailOpen(false);
+                    }
+                  }}
+                >
+                  Request Review
+                </Button>
+                <Button 
                   variant="destructive"
                   onClick={() => {
-                    handleRejectApplication(selectedApplication.id);
+                    const reason = prompt('Enter reason for rejection:');
+                    handleRejectApplication(selectedApplication.id, reason || undefined);
                     setIsApplicationDetailOpen(false);
                   }}
                 >
