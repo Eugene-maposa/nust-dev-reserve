@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import UserDocumentManager from '@/components/projects/UserDocumentManager';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
@@ -48,6 +48,7 @@ interface Resource {
 
 const Dashboard = () => {
   const { user, signOut } = useAuth();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showBookings, setShowBookings] = useState(false);
@@ -104,6 +105,31 @@ const Dashboard = () => {
     enabled: !!user,
   });
 
+  // Real-time subscription for bookings
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('dashboard-bookings')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['bookings', user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
+
   // Fetch available resources
   const { data: resources = [], isLoading: isLoadingResources } = useQuery({
     queryKey: ['resources'],
@@ -151,6 +177,31 @@ const Dashboard = () => {
     },
     enabled: !!user,
   });
+
+  // Real-time subscription for projects
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('dashboard-projects')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['dashboard-projects', user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
 
   // Filter bookings based on search query and status
   const filteredBookings = bookings.filter(booking =>

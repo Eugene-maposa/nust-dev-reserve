@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import Layout from '@/components/layout/Layout';
 import PageHeader from '@/components/ui/PageHeader';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -130,6 +131,7 @@ interface Room {
 
 const Admin = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { toast } = useToast();
   const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [isEditUserOpen, setIsEditUserOpen] = useState(false);
@@ -222,6 +224,60 @@ const Admin = () => {
   useEffect(() => {
     checkAuth();
     fetchData();
+  }, []);
+
+  // Real-time subscriptions for admin data
+  useEffect(() => {
+    const bookingsChannel = supabase
+      .channel('admin-bookings')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bookings'
+        },
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    const projectsChannel = supabase
+      .channel('admin-projects')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects'
+        },
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    const applicationsChannel = supabase
+      .channel('admin-applications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'innovation_hub_applications'
+        },
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(bookingsChannel);
+      supabase.removeChannel(projectsChannel);
+      supabase.removeChannel(applicationsChannel);
+    };
   }, []);
 
   // Update stats when data changes

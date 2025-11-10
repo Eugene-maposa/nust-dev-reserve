@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Eye, Edit, Trash2, Calendar, Target } from 'lucide-react';
 import Layout from '@/components/layout/Layout';
 import PageHeader from '@/components/ui/PageHeader';
@@ -17,6 +17,7 @@ import ProjectDetails from '@/components/projects/ProjectDetails';
 
 const Projects = () => {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const [selectedProject, setSelectedProject] = useState(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingProject, setEditingProject] = useState(null);
@@ -47,6 +48,31 @@ const Projects = () => {
     },
     enabled: !!user,
   });
+
+  // Real-time subscription for projects
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel('user-projects')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects',
+          filter: `user_id=eq.${user.id}`
+        },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['projects', user.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, queryClient]);
 
   const deleteProject = async (projectId: string) => {
     const { error } = await supabase
