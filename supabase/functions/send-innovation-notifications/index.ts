@@ -8,11 +8,15 @@ const corsHeaders = {
 };
 
 interface NotificationRequest {
-  applicationId: string;
+  applicationId?: string;
   userId: string;
-  notificationType: 'approved' | 'review_needed' | 'rejected';
+  notificationType: 'application_received' | 'approved' | 'review_needed' | 'rejected';
   message?: string;
   reviewComments?: string;
+  // For application_received, pass data directly
+  applicantName?: string;
+  applicantEmail?: string;
+  projectTitle?: string;
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -27,25 +31,39 @@ const handler = async (req: Request): Promise<Response> => {
     );
 
     const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
-    const { applicationId, userId, notificationType, message, reviewComments }: NotificationRequest = await req.json();
+    const { applicationId, userId, notificationType, message, reviewComments, applicantName, applicantEmail, projectTitle }: NotificationRequest = await req.json();
 
     console.log("Processing innovation hub notification:", { applicationId, userId, notificationType });
 
-    // Get user profile and application details
-    const { data: userProfile } = await supabaseClient
-      .from('user_profiles')
-      .select('email, full_name')
-      .eq('id', userId)
-      .single();
+    let userEmail = applicantEmail;
+    let userName = applicantName;
+    let appTitle = projectTitle;
 
-    const { data: application } = await supabaseClient
-      .from('innovation_hub_applications')
-      .select('title, project_description, innovation_type, status')
-      .eq('id', applicationId)
-      .single();
+    // For status change notifications, fetch from database
+    if (notificationType !== 'application_received' && applicationId) {
+      const { data: userProfile } = await supabaseClient
+        .from('user_profiles')
+        .select('email, full_name')
+        .eq('id', userId)
+        .single();
 
-    if (!userProfile || !application) {
-      throw new Error('User or application not found');
+      const { data: application } = await supabaseClient
+        .from('innovation_hub_applications')
+        .select('title, full_name, email, project_description, innovation_type, status')
+        .eq('id', applicationId)
+        .single();
+
+      if (!userProfile && !application) {
+        throw new Error('User or application not found');
+      }
+
+      userEmail = application?.email || userProfile?.email;
+      userName = application?.full_name || userProfile?.full_name || 'Innovator';
+      appTitle = application?.title;
+    }
+
+    if (!userEmail) {
+      throw new Error('No email address found');
     }
 
     // Prepare email content based on notification type
@@ -53,118 +71,219 @@ const handler = async (req: Request): Promise<Response> => {
     let htmlContent: string;
 
     switch (notificationType) {
-      case 'approved':
-        subject = `🎉 Your Innovation Hub Application has been Approved!`;
+      case 'application_received':
+        subject = 'NUST Innovation Hub - Application Received';
         htmlContent = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #10b981;">Congratulations!</h1>
-            <p>Dear ${userProfile.full_name || 'Innovator'},</p>
-            
-            <p>We are excited to inform you that your Innovation Hub application "<strong>${application.title}</strong>" has been <strong>approved</strong>!</p>
-            
-            <div style="background-color: #f0fdf4; padding: 20px; border-radius: 8px; margin: 20px 0;">
-              <h2 style="color: #059669; margin-top: 0;">What's Next?</h2>
-              <ul style="line-height: 1.8;">
-                <li>You now have access to the NUST Technovation Centre facilities</li>
-                <li>Visit the centre during operating hours to begin working on your project</li>
-                <li>Connect with mentors and other innovators</li>
-                <li>Access our resources and equipment</li>
-              </ul>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h2 style="color: #1a365d; margin: 0;">NATIONAL UNIVERSITY OF SCIENCE AND TECHNOLOGY</h2>
+              <p style="color: #4a5568; margin: 5px 0;">Innovation and Business Development (IBD)</p>
             </div>
             
-            <p><strong>Project Details:</strong></p>
-            <ul>
-              <li><strong>Title:</strong> ${application.title}</li>
-              <li><strong>Innovation Type:</strong> ${application.innovation_type || 'N/A'}</li>
+            <p style="color: #2d3748;">Dear ${userName},</p>
+            
+            <p style="color: #2d3748; line-height: 1.6;">
+              Thank you for submitting your application to join the Innovation Hub at the National University of Science and Technology (NUST) under the Innovation and Business Development (IBD) unit.
+            </p>
+            
+            <p style="color: #2d3748; line-height: 1.6;">
+              We acknowledge receipt of your application titled "<strong>${appTitle}</strong>" and sincerely appreciate your interest in advancing innovation through our platform.
+            </p>
+            
+            <p style="color: #2d3748; line-height: 1.6;">
+              Your application is currently under review by our technical and strategic teams. You will be notified of the outcome within the next <strong>5–10 working days</strong>. Should any additional information or clarification be required during the review process, we will be in touch.
+            </p>
+            
+            <div style="background-color: #f7fafc; border-left: 4px solid #3182ce; padding: 15px; margin: 20px 0;">
+              <p style="color: #2d3748; margin: 0; line-height: 1.6;">
+                <strong>Interim Access:</strong> While your project is under review, your application grants you interim access to selected resources and equipment under the Innovation and Business Development (IBD) unit. In particular, you will be granted access to the <strong>Software Development Centre (SDC)</strong>, which is to be used strictly for the advancement and development of your proposed project. Please note that all lab rules, protocols, and usage policies will apply during this period.
+              </p>
+            </div>
+            
+            <p style="color: #2d3748; line-height: 1.6;">
+              If you have any questions or need further assistance, feel free to contact us.
+            </p>
+            
+            <p style="color: #2d3748; line-height: 1.6;">
+              We look forward to seeing your innovation grow and to potentially working with you more closely in the future.
+            </p>
+            
+            <p style="color: #2d3748; margin-top: 30px;">
+              Warm regards,<br><br>
+              <strong>Innovation Lead - IBD</strong><br>
+              National University of Science and Technology
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+            
+            <p style="color: #718096; font-size: 12px; line-height: 1.6;">
+              <strong>Disclaimer:</strong> <a href="https://www.nust.ac.zw/index.php/e-mail-disclaimer.html" style="color: #3182ce;">https://www.nust.ac.zw/index.php/e-mail-disclaimer.html</a><br>
+              <strong>Privacy Notice:</strong> <a href="https://www.nust.ac.zw/index.php/privacy-notice.html" style="color: #3182ce;">https://www.nust.ac.zw/index.php/privacy-notice.html</a>
+            </p>
+          </div>
+        `;
+        break;
+
+      case 'approved':
+        subject = `NUST Innovation Hub - Application Approved!`;
+        htmlContent = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h2 style="color: #1a365d; margin: 0;">NATIONAL UNIVERSITY OF SCIENCE AND TECHNOLOGY</h2>
+              <p style="color: #4a5568; margin: 5px 0;">Innovation and Business Development (IBD)</p>
+            </div>
+            
+            <p style="color: #2d3748;">Dear ${userName},</p>
+            
+            <div style="background-color: #c6f6d5; border-left: 4px solid #38a169; padding: 15px; margin: 20px 0;">
+              <p style="color: #276749; margin: 0; font-weight: bold;">
+                Congratulations! Your application has been APPROVED!
+              </p>
+            </div>
+            
+            <p style="color: #2d3748; line-height: 1.6;">
+              We are pleased to inform you that your application titled "<strong>${appTitle}</strong>" to join the Innovation Hub has been reviewed and approved by our technical and strategic teams.
+            </p>
+            
+            <p style="color: #2d3748; line-height: 1.6;">
+              You now have full access to the Innovation Hub facilities, including:
+            </p>
+            <ul style="color: #2d3748; line-height: 1.8;">
+              <li>Software Development Centre (SDC)</li>
+              <li>Prototyping facilities</li>
+              <li>Meeting and collaboration spaces</li>
+              <li>Mentorship and technical support</li>
             </ul>
             
-            ${message ? `<p><strong>Additional Notes:</strong> ${message}</p>` : ''}
+            ${reviewComments ? `
+            <div style="background-color: #f7fafc; border-left: 4px solid #3182ce; padding: 15px; margin: 20px 0;">
+              <p style="color: #2d3748; margin: 0;"><strong>Additional Notes:</strong></p>
+              <p style="color: #4a5568; margin: 10px 0 0 0;">${reviewComments}</p>
+            </div>
+            ` : ''}
             
-            <p>We look forward to seeing your innovation come to life!</p>
+            <p style="color: #2d3748; line-height: 1.6;">
+              Please visit the IBD office to complete your onboarding and receive your access credentials.
+            </p>
             
-            <p>Best regards,<br><strong>NUST Technovation Centre Team</strong></p>
+            <p style="color: #2d3748; margin-top: 30px;">
+              Warm regards,<br><br>
+              <strong>Innovation Lead - IBD</strong><br>
+              National University of Science and Technology
+            </p>
             
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-            <p style="color: #6b7280; font-size: 12px;">
-              If you have any questions, please contact us at the Technovation Centre.
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+            
+            <p style="color: #718096; font-size: 12px; line-height: 1.6;">
+              <strong>Disclaimer:</strong> <a href="https://www.nust.ac.zw/index.php/e-mail-disclaimer.html" style="color: #3182ce;">https://www.nust.ac.zw/index.php/e-mail-disclaimer.html</a><br>
+              <strong>Privacy Notice:</strong> <a href="https://www.nust.ac.zw/index.php/privacy-notice.html" style="color: #3182ce;">https://www.nust.ac.zw/index.php/privacy-notice.html</a>
             </p>
           </div>
         `;
         break;
 
       case 'review_needed':
-        subject = `📋 Action Required: Document Review for Your Innovation Hub Application`;
+        subject = 'NUST Innovation Hub - Additional Information Required';
         htmlContent = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #f59e0b;">Document Review Required</h1>
-            <p>Dear ${userProfile.full_name || 'Innovator'},</p>
-            
-            <p>Thank you for your Innovation Hub application "<strong>${application.title}</strong>".</p>
-            
-            <div style="background-color: #fffbeb; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #f59e0b;">
-              <h2 style="color: #d97706; margin-top: 0;">Action Required</h2>
-              <p>We have reviewed your application and need some additional information or documentation before we can proceed.</p>
-              
-              ${reviewComments ? `
-                <div style="background-color: white; padding: 15px; border-radius: 6px; margin-top: 15px;">
-                  <strong>Review Comments:</strong>
-                  <p style="margin: 10px 0 0 0;">${reviewComments}</p>
-                </div>
-              ` : ''}
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h2 style="color: #1a365d; margin: 0;">NATIONAL UNIVERSITY OF SCIENCE AND TECHNOLOGY</h2>
+              <p style="color: #4a5568; margin: 5px 0;">Innovation and Business Development (IBD)</p>
             </div>
             
-            <p><strong>What to do next:</strong></p>
-            <ol style="line-height: 1.8;">
-              <li>Review the comments above carefully</li>
-              <li>Log in to your account on the Innovation Hub portal</li>
-              <li>Upload the required documents or make the necessary changes</li>
-              <li>Submit your updated application for review</li>
-            </ol>
+            <p style="color: #2d3748;">Dear ${userName},</p>
             
-            <p>Once you've addressed the review comments, we'll process your application promptly.</p>
+            <p style="color: #2d3748; line-height: 1.6;">
+              Thank you for your application titled "<strong>${appTitle}</strong>" to the Innovation Hub.
+            </p>
             
-            ${message ? `<p><strong>Additional Information:</strong> ${message}</p>` : ''}
+            <div style="background-color: #fefcbf; border-left: 4px solid #d69e2e; padding: 15px; margin: 20px 0;">
+              <p style="color: #744210; margin: 0; font-weight: bold;">
+                Action Required: Additional Information/Documents Needed
+              </p>
+            </div>
             
-            <p>Best regards,<br><strong>NUST Technovation Centre Team</strong></p>
+            <p style="color: #2d3748; line-height: 1.6;">
+              After reviewing your application, our team requires additional information or clarification before we can proceed with the final decision.
+            </p>
             
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-            <p style="color: #6b7280; font-size: 12px;">
-              If you have any questions about the review comments, please contact us at the Technovation Centre.
+            ${reviewComments ? `
+            <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <p style="color: #2d3748; margin: 0 0 10px 0;"><strong>Reviewer Comments:</strong></p>
+              <p style="color: #4a5568; margin: 0; white-space: pre-line;">${reviewComments}</p>
+            </div>
+            ` : ''}
+            
+            <p style="color: #2d3748; line-height: 1.6;">
+              Please address the above requirements and update your application or contact us with the requested information within <strong>7 working days</strong>.
+            </p>
+            
+            <p style="color: #2d3748; line-height: 1.6;">
+              You can update your application by logging into the Technovation Centre portal or by contacting the IBD office directly.
+            </p>
+            
+            <p style="color: #2d3748; margin-top: 30px;">
+              Warm regards,<br><br>
+              <strong>Innovation Lead - IBD</strong><br>
+              National University of Science and Technology
+            </p>
+            
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+            
+            <p style="color: #718096; font-size: 12px; line-height: 1.6;">
+              <strong>Disclaimer:</strong> <a href="https://www.nust.ac.zw/index.php/e-mail-disclaimer.html" style="color: #3182ce;">https://www.nust.ac.zw/index.php/e-mail-disclaimer.html</a><br>
+              <strong>Privacy Notice:</strong> <a href="https://www.nust.ac.zw/index.php/privacy-notice.html" style="color: #3182ce;">https://www.nust.ac.zw/index.php/privacy-notice.html</a>
             </p>
           </div>
         `;
         break;
 
       case 'rejected':
-        subject = `Application Update: ${application.title}`;
+        subject = 'NUST Innovation Hub - Application Update';
         htmlContent = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <h1 style="color: #ef4444;">Application Status Update</h1>
-            <p>Dear ${userProfile.full_name || 'Innovator'},</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+            <div style="text-align: center; margin-bottom: 30px;">
+              <h2 style="color: #1a365d; margin: 0;">NATIONAL UNIVERSITY OF SCIENCE AND TECHNOLOGY</h2>
+              <p style="color: #4a5568; margin: 5px 0;">Innovation and Business Development (IBD)</p>
+            </div>
             
-            <p>Thank you for your interest in the NUST Innovation Hub and for submitting your application "<strong>${application.title}</strong>".</p>
+            <p style="color: #2d3748;">Dear ${userName},</p>
             
-            <p>After careful review, we regret to inform you that we are unable to approve your application at this time.</p>
+            <p style="color: #2d3748; line-height: 1.6;">
+              Thank you for your application titled "<strong>${appTitle}</strong>" to the Innovation Hub.
+            </p>
+            
+            <p style="color: #2d3748; line-height: 1.6;">
+              After careful review by our technical and strategic teams, we regret to inform you that your application has not been approved at this time.
+            </p>
             
             ${reviewComments ? `
-              <div style="background-color: #fef2f2; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <strong>Feedback:</strong>
-                <p style="margin: 10px 0 0 0;">${reviewComments}</p>
-              </div>
+            <div style="background-color: #f7fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin: 20px 0;">
+              <p style="color: #2d3748; margin: 0 0 10px 0;"><strong>Feedback from Reviewers:</strong></p>
+              <p style="color: #4a5568; margin: 0; white-space: pre-line;">${reviewComments}</p>
+            </div>
             ` : ''}
             
-            <p>We encourage you to:</p>
-            <ul style="line-height: 1.8;">
-              <li>Review our feedback carefully</li>
-              <li>Refine your innovation concept</li>
-              <li>Consider reapplying in the future</li>
-            </ul>
+            <p style="color: #2d3748; line-height: 1.6;">
+              We encourage you to address the feedback provided and consider reapplying in the future. If you have any questions about this decision or would like guidance on strengthening your application, please don't hesitate to contact us.
+            </p>
             
-            ${message ? `<p><strong>Additional Information:</strong> ${message}</p>` : ''}
+            <p style="color: #2d3748; line-height: 1.6;">
+              We appreciate your interest in the Innovation Hub and wish you success in your innovative endeavors.
+            </p>
             
-            <p>We appreciate your interest in innovation and wish you the best in your future endeavors.</p>
+            <p style="color: #2d3748; margin-top: 30px;">
+              Warm regards,<br><br>
+              <strong>Innovation Lead - IBD</strong><br>
+              National University of Science and Technology
+            </p>
             
-            <p>Best regards,<br><strong>NUST Technovation Centre Team</strong></p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 30px 0;">
+            
+            <p style="color: #718096; font-size: 12px; line-height: 1.6;">
+              <strong>Disclaimer:</strong> <a href="https://www.nust.ac.zw/index.php/e-mail-disclaimer.html" style="color: #3182ce;">https://www.nust.ac.zw/index.php/e-mail-disclaimer.html</a><br>
+              <strong>Privacy Notice:</strong> <a href="https://www.nust.ac.zw/index.php/privacy-notice.html" style="color: #3182ce;">https://www.nust.ac.zw/index.php/privacy-notice.html</a>
+            </p>
           </div>
         `;
         break;
@@ -175,8 +294,8 @@ const handler = async (req: Request): Promise<Response> => {
 
     // Send email notification
     const emailResponse = await resend.emails.send({
-      from: "NUST Technovation Centre <onboarding@resend.dev>",
-      to: [userProfile.email],
+      from: "NUST Innovation Hub <onboarding@resend.dev>",
+      to: [userEmail],
       subject: subject,
       html: htmlContent,
     });

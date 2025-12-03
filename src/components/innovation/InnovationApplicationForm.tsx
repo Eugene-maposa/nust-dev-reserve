@@ -110,7 +110,7 @@ const InnovationApplicationForm = () => {
         .from('innovation_hub_applications')
         .insert({
           user_id: user.id,
-          title: formData.title,
+          title: formData.projectTitle || formData.title,
           full_name: formData.fullName,
           email: formData.email,
           phone: formData.phone,
@@ -119,34 +119,32 @@ const InnovationApplicationForm = () => {
           position: formData.position,
           faculty: formData.faculty,
           department: formData.department,
-          supervisor: formData.supervisor,
-          project_title: formData.projectTitle,
-          abstract: formData.abstract,
-          problem_statement: formData.problemStatement,
-          aim: formData.aim,
-          project_strategy: formData.projectStrategy,
           project_description: formData.projectDescription,
-          expected_results: formData.expectedResults,
-          rationale: formData.rationale,
-          full_description: formData.fullDescription,
-          novelty_of_invention: formData.noveltyOfInvention,
-          stage_of_invention: formData.stageOfInvention,
-          trl_level: formData.trlLevel,
           team_members: formData.teamMembers,
-          team_members_required: formData.teamMembersRequired,
-          incubation_requirements: formData.incubationRequirements,
-          other_requirements: formData.otherRequirements,
-          estimated_budget: formData.estimatedBudget,
-          proposed_funding: formData.proposedFunding,
-          expected_duration: formData.expectedDuration,
-          resources_needed: formData.resourcesNeeded
         });
 
       if (error) throw error;
 
+      // Send acknowledgment email automatically
+      try {
+        await supabase.functions.invoke('send-innovation-notifications', {
+          body: {
+            userId: user.id,
+            notificationType: 'application_received',
+            applicantName: formData.fullName,
+            applicantEmail: formData.email,
+            projectTitle: formData.projectTitle || formData.title
+          }
+        });
+        console.log('Acknowledgment email sent successfully');
+      } catch (emailError) {
+        console.error('Failed to send acknowledgment email:', emailError);
+        // Don't fail the submission if email fails
+      }
+
       toast({
         title: "Application Submitted",
-        description: "Your Innovation Hub application has been submitted successfully. We'll review it within 5-7 business days."
+        description: "Your Innovation Hub application has been submitted successfully. A confirmation email has been sent to your email address."
       });
 
       // Reset form
