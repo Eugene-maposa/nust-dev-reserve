@@ -72,7 +72,7 @@ const AppRoutes = () => (
         <Dashboard />
       </ProtectedRoute>
     } />
-    <Route path="/admin" element={
+    <Route path="/ibd-portal" element={
       <ProtectedRoute>
         <Admin />
       </ProtectedRoute>
