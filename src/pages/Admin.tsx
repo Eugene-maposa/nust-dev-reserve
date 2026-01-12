@@ -447,7 +447,7 @@ const Admin = () => {
       if (error || !session) {
         toast({
           title: "Access Denied",
-          description: "Please login to access the admin dashboard",
+          description: "Please login to access this portal",
           variant: "destructive",
         });
         navigate('/login');
@@ -462,10 +462,10 @@ const Admin = () => {
         .eq('role', 'admin');
 
       if (rolesError || !roles || roles.length === 0) {
-        console.error("Admin check error:", rolesError);
+        console.error("Access check error:", rolesError);
         toast({
           title: "Access Denied",
-          description: "You don't have admin permission to access this dashboard",
+          description: "You don't have permission to access this portal",
           variant: "destructive",
         });
         navigate('/dashboard');
@@ -2085,7 +2085,11 @@ const Admin = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="user">User</SelectItem>
-                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="lecturer">Lecturer</SelectItem>
+                    <SelectItem value="student">Student</SelectItem>
+                    <SelectItem value="staff">Staff</SelectItem>
+                    <SelectItem value="security">Security</SelectItem>
+                    <SelectItem value="admin">Administrator</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

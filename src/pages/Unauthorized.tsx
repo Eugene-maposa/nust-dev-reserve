@@ -20,7 +20,7 @@ const Unauthorized = () => {
           <Shield className="mx-auto h-16 w-16 text-university-blue mb-4" />
           <h2 className="text-2xl font-semibold mb-2">Access Denied</h2>
           <p className="text-gray-500 mb-6">
-            Sorry, you don't have permission to access this page. Please contact an administrator
+            Sorry, you don't have permission to access this page. Please contact the IBD office
             if you believe this is an error.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
