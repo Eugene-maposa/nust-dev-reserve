@@ -30,10 +30,56 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
+    // Authentication: Verify JWT token
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      return new Response(JSON.stringify({ error: 'Missing authorization' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await supabaseClient.auth.getUser(token);
+    
+    if (claimsError || !claimsData?.user) {
+      return new Response(JSON.stringify({ error: 'Invalid token' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      });
+    }
+
+    const authenticatedUserId = claimsData.user.id;
+
     const resend = new Resend(Deno.env.get("RESEND_API_KEY"));
     const { applicationId, userId, notificationType, message, reviewComments, applicantName, applicantEmail, projectTitle }: NotificationRequest = await req.json();
 
     console.log("Processing innovation hub notification:", { applicationId, userId, notificationType });
+
+    // Authorization: For status change notifications (approved, rejected, review_needed), require admin role
+    if (notificationType !== 'application_received') {
+      const { data: adminRole, error: roleError } = await supabaseClient
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', authenticatedUserId)
+        .eq('role', 'admin')
+        .single();
+
+      if (roleError || !adminRole) {
+        return new Response(JSON.stringify({ error: 'Unauthorized: Admin role required' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    } else {
+      // For application_received, verify the authenticated user matches the userId
+      if (authenticatedUserId !== userId) {
+        return new Response(JSON.stringify({ error: 'Unauthorized: Can only send notifications for your own applications' }), {
+          status: 403,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        });
+      }
+    }
 
     let userEmail = applicantEmail;
     let userName = applicantName;
