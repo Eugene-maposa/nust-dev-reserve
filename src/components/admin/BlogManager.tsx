@@ -629,6 +629,7 @@ const BlogManager: React.FC = () => {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-16">Image</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>Author</TableHead>
                 <TableHead>Status</TableHead>
@@ -641,6 +642,18 @@ const BlogManager: React.FC = () => {
               {filteredPosts.length > 0 ? (
                 filteredPosts.map((post) => (
                   <TableRow key={post.id}>
+                    <TableCell>
+                      <div className="w-12 h-12 rounded overflow-hidden bg-gray-100">
+                        <img
+                          src={post.image_url}
+                          alt={post.title}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=2070';
+                          }}
+                        />
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <div>
                         <div className="font-medium">{post.title}</div>
@@ -706,7 +719,7 @@ const BlogManager: React.FC = () => {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     {searchQuery ? 'No posts match your search criteria' : 'No blog posts found'}
                   </TableCell>
                 </TableRow>
