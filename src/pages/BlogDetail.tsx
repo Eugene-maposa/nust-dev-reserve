@@ -195,11 +195,14 @@ const BlogDetail = () => {
               )}
             </div>
             
-            <div className="relative h-[400px] rounded-lg overflow-hidden mb-8">
+            <div className="relative h-[400px] rounded-lg overflow-hidden mb-8 bg-gray-100">
               <img 
                 src={post?.image_url || (displayPost as any).imageUrl}
                 alt={displayPost.title}
                 className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?q=80&w=2070';
+                }}
               />
             </div>
 
