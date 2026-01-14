@@ -10,6 +10,7 @@ import { Search, Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
+import { useAuth } from '@/contexts/AuthContext';
 
 // Fallback static blog posts data (used if Supabase fetch fails)
 export const blogPosts: BlogPost[] = [
@@ -161,6 +162,7 @@ const POSTS_PER_PAGE = 6;
 const Blog = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const { isAdmin } = useAuth();
 
   // Fetch blog posts using React Query with pagination
   const { data, isLoading, error } = useQuery({
@@ -223,12 +225,14 @@ const Blog = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <Link to="/blog/create">
-            <Button className="w-full md:w-auto bg-university-blue hover:bg-university-blue/90">
-              <Plus className="h-4 w-4 mr-2" />
-              Create Post
-            </Button>
-          </Link>
+          {isAdmin && (
+            <Link to="/blog/create">
+              <Button className="w-full md:w-auto bg-university-blue hover:bg-university-blue/90">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Post
+              </Button>
+            </Link>
+          )}
         </div>
         
         {isLoading ? (
