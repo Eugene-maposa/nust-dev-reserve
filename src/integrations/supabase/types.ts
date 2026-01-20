@@ -374,30 +374,45 @@ export type Database = {
       rooms: {
         Row: {
           capacity: number | null
+          corridor_side: string | null
           description: string | null
           floor: number | null
+          height: number | null
           id: string
           name: string
+          position_x: number | null
+          position_y: number | null
           status: string
           type: string
+          width: number | null
         }
         Insert: {
           capacity?: number | null
+          corridor_side?: string | null
           description?: string | null
           floor?: number | null
+          height?: number | null
           id?: string
           name: string
+          position_x?: number | null
+          position_y?: number | null
           status?: string
           type: string
+          width?: number | null
         }
         Update: {
           capacity?: number | null
+          corridor_side?: string | null
           description?: string | null
           floor?: number | null
+          height?: number | null
           id?: string
           name?: string
+          position_x?: number | null
+          position_y?: number | null
           status?: string
           type?: string
+          width?: number | null
         }
         Relationships: []
       }
