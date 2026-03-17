@@ -19,10 +19,10 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-// NUST Technovation Centre - Prof Makhurane Building (Bulawayo, Zimbabwe)
+// NUST Prof Makhurane Building, Ascot, Bulawayo, Zimbabwe
 const NUST_TECHNOVATION_CENTRE = {
-  lat: -20.2068,
-  lng: 28.5826,
+  lat: -20.1525,
+  lng: 28.6345,
 };
 
 const LiveMap: React.FC = () => {
