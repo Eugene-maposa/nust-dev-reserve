@@ -39,7 +39,8 @@ const About = () => {
                 <h2 className="text-2xl font-bold mb-4 text-university-blue">About the Centre</h2>
                 <p className="text-gray-700 mb-4">
                   Established in 2015, the Technovation Centre has grown into a university-wide hub for
-                  creativity, prototyping, and venture creation. Located in the Technology Building, the
+                  creativity, prototyping, and venture creation. Located in the Prof Makhurane Building
+                  at the National University of Science and Technology, Bulawayo, Zimbabwe, the
                   Centre brings together students, researchers, and industry partners to co-create
                   solutions to real-world challenges.
                 </p>

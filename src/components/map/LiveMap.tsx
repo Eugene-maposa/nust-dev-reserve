@@ -15,10 +15,10 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-// NUST Technovation Centre approximate coordinates (Windhoek, Namibia)
+// NUST Technovation Centre - Prof Makhurane Building (Bulawayo, Zimbabwe)
 const NUST_TECHNOVATION_CENTRE = {
-  lat: -22.5609,
-  lng: 17.0658,
+  lat: -20.2068,
+  lng: 28.5826,
 };
 
 const LiveMap: React.FC = () => {
@@ -44,8 +44,9 @@ const LiveMap: React.FC = () => {
     marker.bindPopup(
       `<div class="text-center">
         <strong class="text-base">NUST Technovation Centre</strong><br/>
-        <span class="text-sm text-gray-600">Namibia University of Science and Technology</span><br/>
-        <span class="text-xs text-gray-500">Windhoek, Namibia</span>
+        <span class="text-sm text-gray-600">Prof Makhurane Building</span><br/>
+        <span class="text-sm text-gray-600">National University of Science and Technology</span><br/>
+        <span class="text-xs text-gray-500">Bulawayo, Zimbabwe</span>
       </div>`
     ).openPopup();
 
