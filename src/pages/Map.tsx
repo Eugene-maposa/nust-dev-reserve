@@ -1,8 +1,8 @@
-
 import React from 'react';
 import Layout from '@/components/layout/Layout';
 import PageHeader from '@/components/ui/PageHeader';
 import TechnovationCentreMap from '@/components/map/TechnovationCentreMap';
+import LiveMap from '@/components/map/LiveMap';
 
 const Map = () => {
   return (
@@ -12,15 +12,25 @@ const Map = () => {
         subtitle="Explore the layout of the NUST Technovation Centre"
       />
       <div className="container mx-auto px-4 py-12">
-        <div className="max-w-5xl mx-auto">
-          <TechnovationCentreMap />
+        <div className="max-w-5xl mx-auto space-y-10">
+          {/* Live OpenStreetMap */}
+          <div>
+            <h2 className="text-2xl font-bold mb-4 text-primary">Live Location</h2>
+            <LiveMap />
+          </div>
+
+          {/* Existing room layout map */}
+          <div>
+            <h2 className="text-2xl font-bold mb-4 text-primary">Floor Plan & Room Layout</h2>
+            <TechnovationCentreMap />
+          </div>
           
-          <div className="mt-12 bg-gray-50 border rounded-lg p-6">
-            <h2 className="text-2xl font-bold mb-4 text-university-blue">NUST Technovation Centre Information</h2>
+          <div className="bg-muted border rounded-lg p-6">
+            <h2 className="text-2xl font-bold mb-4 text-primary">NUST Technovation Centre Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <h3 className="text-lg font-semibold mb-2">Opening Hours</h3>
-                <ul className="space-y-2 text-gray-700">
+                <ul className="space-y-2 text-muted-foreground">
                   <li className="flex justify-between">
                     <span>Monday - Friday:</span>
                     <span className="font-medium">8:00 AM - 8:00 PM</span>
@@ -37,7 +47,7 @@ const Map = () => {
               </div>
               <div>
                 <h3 className="text-lg font-semibold mb-2">Access Information</h3>
-                <ul className="list-disc list-inside space-y-1 text-gray-700">
+                <ul className="list-disc list-inside space-y-1 text-muted-foreground">
                   <li>Student ID required for entry</li>
                   <li>Access to labs requires booking confirmation</li>
                   <li>Restricted areas require staff authorization</li>
