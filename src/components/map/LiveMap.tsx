@@ -15,10 +15,10 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-// NUST Technovation Centre approximate coordinates (Windhoek, Namibia)
+// NUST Technovation Centre - Prof Makhurane Building (Bulawayo, Zimbabwe)
 const NUST_TECHNOVATION_CENTRE = {
-  lat: -22.5609,
-  lng: 17.0658,
+  lat: -20.2068,
+  lng: 28.5826,
 };
 
 const LiveMap: React.FC = () => {
