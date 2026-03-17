@@ -10,11 +10,12 @@ const Footer = () => {
       <div className="container mx-auto px-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <h3 className="text-university-gold font-semibold text-lg mb-4">NUST Software Development Centre</h3>
+            <h3 className="text-university-gold font-semibold text-lg mb-4">NUST Technovation Centre</h3>
             <address className="not-italic">
               <div className="flex items-start mb-2">
                 <MapPin className="h-5 w-5 mr-2 mt-0.5 text-university-gold" />
-                <span>National University of Science and Technology<br />
+                <span>Prof Makhurane Building<br />
+                National University of Science and Technology<br />
                 P.O. Box AC 939, Ascot<br />
                 Bulawayo, Zimbabwe</span>
               </div>
@@ -24,7 +25,7 @@ const Footer = () => {
               </div>
               <div className="flex items-center mb-2">
                 <Mail className="h-5 w-5 mr-2 text-university-gold" />
-                <span>sdc@nust.ac.zw</span>
+                <span>technovation@nust.ac.zw</span>
               </div>
             </address>
           </div>

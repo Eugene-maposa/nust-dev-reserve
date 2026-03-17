@@ -44,8 +44,9 @@ const LiveMap: React.FC = () => {
     marker.bindPopup(
       `<div class="text-center">
         <strong class="text-base">NUST Technovation Centre</strong><br/>
-        <span class="text-sm text-gray-600">Namibia University of Science and Technology</span><br/>
-        <span class="text-xs text-gray-500">Windhoek, Namibia</span>
+        <span class="text-sm text-gray-600">Prof Makhurane Building</span><br/>
+        <span class="text-sm text-gray-600">National University of Science and Technology</span><br/>
+        <span class="text-xs text-gray-500">Bulawayo, Zimbabwe</span>
       </div>`
     ).openPopup();
 

@@ -9,7 +9,7 @@ const Map = () => {
     <Layout>
       <PageHeader 
         title="NUST Technovation Centre Map" 
-        subtitle="Explore the layout of the NUST Technovation Centre"
+        subtitle="Prof Makhurane Building — National University of Science and Technology, Bulawayo, Zimbabwe"
       />
       <div className="container mx-auto px-4 py-12">
         <div className="max-w-5xl mx-auto space-y-10">
