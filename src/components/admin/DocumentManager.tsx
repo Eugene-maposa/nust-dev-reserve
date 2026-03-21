@@ -194,7 +194,7 @@ const DocumentManager = () => {
 
         {/* Comment Dialog */}
         <Dialog open={isCommentDialogOpen} onOpenChange={setIsCommentDialogOpen}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Document Review</DialogTitle>
             </DialogHeader>

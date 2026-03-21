@@ -2657,7 +2657,7 @@ const Admin = () => {
 
       {/* Application Detail Dialog */}
       <Dialog open={isApplicationDetailOpen} onOpenChange={setIsApplicationDetailOpen}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Innovation Hub Application Details</DialogTitle>
           </DialogHeader>
@@ -2771,7 +2771,7 @@ const Admin = () => {
 
       {/* Project Details Dialog */}
       <Dialog open={isProjectDetailsOpen} onOpenChange={setIsProjectDetailsOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh]">
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5" />
@@ -2880,7 +2880,7 @@ const Admin = () => {
 
       {/* TRL Analytics Dialog */}
       <Dialog open={isTrlAnalyticsOpen} onOpenChange={setIsTrlAnalyticsOpen}>
-        <DialogContent className="sm:max-w-[800px] max-h-[80vh]">
+        <DialogContent className="sm:max-w-[800px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Activity className="h-5 w-5" />
@@ -2981,7 +2981,7 @@ const Admin = () => {
 
       {/* Progress Trend Dialog */}
       <Dialog open={isProgressTrendOpen} onOpenChange={setIsProgressTrendOpen}>
-        <DialogContent className="sm:max-w-[900px] max-h-[80vh]">
+        <DialogContent className="sm:max-w-[900px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
