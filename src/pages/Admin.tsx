@@ -2981,7 +2981,7 @@ const Admin = () => {
 
       {/* Progress Trend Dialog */}
       <Dialog open={isProgressTrendOpen} onOpenChange={setIsProgressTrendOpen}>
-        <DialogContent className="sm:max-w-[900px] max-h-[80vh]">
+        <DialogContent className="sm:max-w-[900px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5" />
