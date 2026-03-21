@@ -5,7 +5,10 @@ import 'leaflet-routing-machine';
 import 'leaflet-routing-machine/dist/leaflet-routing-machine.css';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Navigation, Loader2, MapPin, X } from 'lucide-react';
+import { Navigation, Loader2, MapPin, X, MapPinPlus } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 // Fix Leaflet default marker icons
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
@@ -19,28 +22,56 @@ L.Icon.Default.mergeOptions({
   shadowUrl: markerShadow,
 });
 
-// NUST Prof Makhurane Building, Ascot, Bulawayo, Zimbabwe
-const NUST_TECHNOVATION_CENTRE = {
-  lat: -20.1525,
-  lng: 28.6345,
-};
+// Default fallback coordinates
+const DEFAULT_COORDS = { lat: -20.1525, lng: 28.6345 };
 
 const LiveMap: React.FC = () => {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const routingControlRef = useRef<any>(null);
   const userMarkerRef = useRef<L.Marker | null>(null);
+  const destMarkerRef = useRef<L.Marker | null>(null);
 
   const [locating, setLocating] = useState(false);
+  const [settingLocation, setSettingLocation] = useState(false);
   const [routeActive, setRouteActive] = useState(false);
   const [routeInfo, setRouteInfo] = useState<{ distance: string; time: string } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const [centreCoords, setCentreCoords] = useState(DEFAULT_COORDS);
+  const [locationIsSet, setLocationIsSet] = useState<boolean | null>(null); // null = loading
+  const { isAdmin } = useAuth();
+  const { toast } = useToast();
 
+  // Fetch stored location on mount
   useEffect(() => {
-    if (!mapRef.current || mapInstanceRef.current) return;
+    const fetchLocation = async () => {
+      const { data, error } = await supabase
+        .from('site_settings')
+        .select('value')
+        .eq('key', 'centre_location')
+        .single();
+
+      if (!error && data) {
+        const val = data.value as any;
+        if (val.set && val.lat && val.lng) {
+          setCentreCoords({ lat: val.lat, lng: val.lng });
+          setLocationIsSet(true);
+        } else {
+          setLocationIsSet(false);
+        }
+      } else {
+        setLocationIsSet(false);
+      }
+    };
+    fetchLocation();
+  }, []);
+
+  // Initialize map once coords are ready
+  useEffect(() => {
+    if (!mapRef.current || mapInstanceRef.current || locationIsSet === null) return;
 
     const map = L.map(mapRef.current, {
-      center: [NUST_TECHNOVATION_CENTRE.lat, NUST_TECHNOVATION_CENTRE.lng],
+      center: [centreCoords.lat, centreCoords.lng],
       zoom: 17,
       scrollWheelZoom: true,
     });
@@ -61,7 +92,7 @@ const LiveMap: React.FC = () => {
       popupAnchor: [0, -32],
     });
 
-    L.marker([NUST_TECHNOVATION_CENTRE.lat, NUST_TECHNOVATION_CENTRE.lng], { icon: destIcon })
+    const marker = L.marker([centreCoords.lat, centreCoords.lng], { icon: destIcon })
       .addTo(map)
       .bindPopup(
         `<div class="text-center">
@@ -73,6 +104,7 @@ const LiveMap: React.FC = () => {
       )
       .openPopup();
 
+    destMarkerRef.current = marker;
     mapInstanceRef.current = map;
     setTimeout(() => map.invalidateSize(), 100);
 
@@ -80,7 +112,66 @@ const LiveMap: React.FC = () => {
       map.remove();
       mapInstanceRef.current = null;
     };
-  }, []);
+  }, [locationIsSet, centreCoords]);
+
+  const setAdminLocation = () => {
+    if (!navigator.geolocation) {
+      setLocationError('Geolocation is not supported by your browser.');
+      return;
+    }
+
+    setSettingLocation(true);
+    setLocationError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        const { latitude, longitude } = position.coords;
+
+        const { error } = await supabase
+          .from('site_settings')
+          .update({ value: { lat: latitude, lng: longitude, set: true } })
+          .eq('key', 'centre_location');
+
+        if (error) {
+          toast({ title: 'Error', description: 'Failed to save location.', variant: 'destructive' });
+          setSettingLocation(false);
+          return;
+        }
+
+        setCentreCoords({ lat: latitude, lng: longitude });
+        setLocationIsSet(true);
+        setSettingLocation(false);
+
+        // Update map view and marker
+        const map = mapInstanceRef.current;
+        if (map) {
+          map.setView([latitude, longitude], 17);
+          if (destMarkerRef.current) {
+            destMarkerRef.current.setLatLng([latitude, longitude]);
+          }
+        }
+
+        toast({ title: 'Location Set', description: 'Technovation Centre location has been saved permanently.' });
+      },
+      (error) => {
+        setSettingLocation(false);
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            setLocationError('Location access denied. Please enable location permissions.');
+            break;
+          case error.POSITION_UNAVAILABLE:
+            setLocationError('Location information is unavailable.');
+            break;
+          case error.TIMEOUT:
+            setLocationError('Location request timed out. Please try again.');
+            break;
+          default:
+            setLocationError('An unknown error occurred.');
+        }
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
 
   const clearRoute = () => {
     const map = mapInstanceRef.current;
@@ -97,7 +188,7 @@ const LiveMap: React.FC = () => {
     setRouteActive(false);
     setRouteInfo(null);
     setLocationError(null);
-    map.setView([NUST_TECHNOVATION_CENTRE.lat, NUST_TECHNOVATION_CENTRE.lng], 17);
+    map.setView([centreCoords.lat, centreCoords.lng], 17);
   };
 
   const getDirections = () => {
@@ -115,15 +206,9 @@ const LiveMap: React.FC = () => {
         const { latitude, longitude } = position.coords;
         setLocating(false);
 
-        // Clear previous route
-        if (routingControlRef.current) {
-          map.removeControl(routingControlRef.current);
-        }
-        if (userMarkerRef.current) {
-          map.removeLayer(userMarkerRef.current);
-        }
+        if (routingControlRef.current) map.removeControl(routingControlRef.current);
+        if (userMarkerRef.current) map.removeLayer(userMarkerRef.current);
 
-        // User location marker
         const userIcon = L.divIcon({
           html: `<div style="background:#2563eb;width:28px;height:28px;border-radius:50%;border:3px solid white;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(0,0,0,0.3);">
             <div style="background:white;width:10px;height:10px;border-radius:50%;"></div>
@@ -137,11 +222,10 @@ const LiveMap: React.FC = () => {
           .addTo(map)
           .bindPopup('<strong>Your Location</strong>');
 
-        // Add routing with shortest route
         const control = (L as any).Routing.control({
           waypoints: [
             L.latLng(latitude, longitude),
-            L.latLng(NUST_TECHNOVATION_CENTRE.lat, NUST_TECHNOVATION_CENTRE.lng),
+            L.latLng(centreCoords.lat, centreCoords.lng),
           ],
           routeWhileDragging: false,
           addWaypoints: false,
@@ -157,8 +241,8 @@ const LiveMap: React.FC = () => {
             serviceUrl: 'https://router.project-osrm.org/route/v1',
             profile: 'driving',
           }),
-          createMarker: () => null, // We handle markers ourselves
-          show: false, // Hide the default itinerary panel
+          createMarker: () => null,
+          show: false,
         }).addTo(map);
 
         control.on('routesfound', (e: any) => {
@@ -199,9 +283,41 @@ const LiveMap: React.FC = () => {
     );
   };
 
+  if (locationIsSet === null) {
+    return (
+      <Card className="w-full">
+        <CardContent className="flex items-center justify-center py-12">
+          <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-muted-foreground">Loading map...</span>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="w-full overflow-hidden">
       <CardContent className="p-0 relative">
+        {/* Admin: Set Location button (only shown if location not yet set) */}
+        {isAdmin && !locationIsSet && (
+          <div className="absolute top-3 left-3 z-[1000]">
+            <Button
+              onClick={setAdminLocation}
+              disabled={settingLocation}
+              className="bg-accent text-accent-foreground shadow-lg hover:bg-accent/90"
+              size="sm"
+            >
+              {settingLocation ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Setting Location...</>
+              ) : (
+                <><MapPinPlus className="w-4 h-4 mr-2" /> Set Centre Location</>
+              )}
+            </Button>
+            <p className="text-xs text-muted-foreground mt-1 bg-background/90 rounded px-2 py-1 max-w-[220px]">
+              Use your current live location to set the Technovation Centre pin. This can only be done once.
+            </p>
+          </div>
+        )}
+
         {/* Controls overlay */}
         <div className="absolute top-3 right-3 z-[1000] flex flex-col gap-2">
           {!routeActive ? (
