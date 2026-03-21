@@ -2771,7 +2771,7 @@ const Admin = () => {
 
       {/* Project Details Dialog */}
       <Dialog open={isProjectDetailsOpen} onOpenChange={setIsProjectDetailsOpen}>
-        <DialogContent className="sm:max-w-[700px] max-h-[80vh]">
+        <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Eye className="h-5 w-5" />
