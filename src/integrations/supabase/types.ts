@@ -447,6 +447,8 @@ export type Database = {
           email: string
           full_name: string | null
           id: string
+          id_back_url: string | null
+          id_front_url: string | null
           permissions: Json | null
           phone: string | null
           role: string
@@ -459,6 +461,8 @@ export type Database = {
           email: string
           full_name?: string | null
           id: string
+          id_back_url?: string | null
+          id_front_url?: string | null
           permissions?: Json | null
           phone?: string | null
           role?: string
@@ -471,6 +475,8 @@ export type Database = {
           email?: string
           full_name?: string | null
           id?: string
+          id_back_url?: string | null
+          id_front_url?: string | null
           permissions?: Json | null
           phone?: string | null
           role?: string
