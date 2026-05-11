@@ -120,6 +120,15 @@ const Navbar = () => {
             >
               <FileText className="inline mr-2 h-4 w-4" /> Blog
             </Link>
+            {user && isAdmin && (
+              <Link 
+                to="/ibd-portal" 
+                className="block px-3 py-2 rounded-md bg-university-gold/20 hover:bg-university-gold/30 transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                <Shield className="inline mr-2 h-4 w-4" /> IBD Portal
+              </Link>
+            )}
             
             {user ? (
               <button 
