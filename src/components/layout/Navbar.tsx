@@ -2,12 +2,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, User, Calendar, Map, FileText, Home, LogOut } from 'lucide-react';
+import { Menu, X, User, Calendar, Map, FileText, Home, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
 
   return (
     <nav className="bg-university-blue text-white shadow-md">
@@ -38,6 +38,11 @@ const Navbar = () => {
             <Link to="/blog" className="flex items-center px-3 py-2 rounded-md hover:bg-university-blue/80 transition-colors">
               <FileText className="mr-2 h-4 w-4" /> Blog
             </Link>
+            {user && isAdmin && (
+              <Link to="/ibd-portal" className="flex items-center px-3 py-2 rounded-md bg-university-gold/20 hover:bg-university-gold/30 transition-colors">
+                <Shield className="mr-2 h-4 w-4" /> IBD Portal
+              </Link>
+            )}
             
             <div className="ml-4">
               {user ? (
@@ -115,6 +120,15 @@ const Navbar = () => {
             >
               <FileText className="inline mr-2 h-4 w-4" /> Blog
             </Link>
+            {user && isAdmin && (
+              <Link 
+                to="/ibd-portal" 
+                className="block px-3 py-2 rounded-md bg-university-gold/20 hover:bg-university-gold/30 transition-colors"
+                onClick={() => setIsOpen(false)}
+              >
+                <Shield className="inline mr-2 h-4 w-4" /> IBD Portal
+              </Link>
+            )}
             
             {user ? (
               <button 
