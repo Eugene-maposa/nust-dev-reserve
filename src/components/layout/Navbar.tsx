@@ -2,12 +2,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, User, Calendar, Map, FileText, Home, LogOut } from 'lucide-react';
+import { Menu, X, User, Calendar, Map, FileText, Home, LogOut, Shield } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  const { user, signOut } = useAuth();
+  const { user, signOut, isAdmin } = useAuth();
 
   return (
     <nav className="bg-university-blue text-white shadow-md">
