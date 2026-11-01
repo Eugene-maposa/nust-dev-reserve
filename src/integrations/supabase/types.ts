@@ -139,6 +139,38 @@ export type Database = {
           },
         ]
       }
+      check_ins: {
+        Row: {
+          created_at: string
+          id: string
+          room_id: string
+          scanned_code: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          room_id: string
+          scanned_code?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          room_id?: string
+          scanned_code?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "check_ins_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       innovation_hub_applications: {
         Row: {
           created_at: string | null
