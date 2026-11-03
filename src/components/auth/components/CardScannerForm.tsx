@@ -60,7 +60,7 @@ const CardScannerForm = ({ initialCode, onRegistered }: { initialCode?: string; 
   const lookupUser = useCallback(async (code: string) => {
     try {
       const { data: rows, error } = await supabase.rpc('lookup_user_by_code' as never, { p_code: code } as never);
-      const profile = (Array.isArray(rows) ? rows[0] : null) as { id: string; email: string; full_name: string | null } | null;
+      const profile = (Array.isArray(rows) ? (rows as unknown[])[0] : null) as { id: string; email: string; full_name: string | null } | null;
 
       if (error) {
         console.error('Error looking up user:', error);
