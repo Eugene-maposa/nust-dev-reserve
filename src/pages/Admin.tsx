@@ -85,6 +85,7 @@ import { format } from 'date-fns';
 import ComprehensiveUserTable from '@/components/admin/ComprehensiveUserTable';
 import BlogManager from '@/components/admin/BlogManager';
 import DocumentManager from '@/components/admin/DocumentManager';
+import CardScannerForm from '@/components/auth/components/CardScannerForm';
 
 // Types
 interface User {
@@ -1344,6 +1345,7 @@ const Admin = () => {
               <TabsTrigger value="resources">Resources</TabsTrigger>
               <TabsTrigger value="projects">Projects</TabsTrigger>
               <TabsTrigger value="hub-applications">Innovation Hub</TabsTrigger>
+              <TabsTrigger value="scan-id">Scan ID</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
             
@@ -1802,7 +1804,18 @@ const Admin = () => {
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
+              <TabsContent value="scan-id" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Scan ID Card</CardTitle>
+                  </CardHeader>
+                  <CardContent className="max-w-md mx-auto">
+                    <CardScannerForm />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
               <TabsContent value="settings" className="space-y-4">
                 <Card>
                   <CardHeader>
