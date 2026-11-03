@@ -1344,6 +1344,7 @@ const Admin = () => {
               <TabsTrigger value="resources">Resources</TabsTrigger>
               <TabsTrigger value="projects">Projects</TabsTrigger>
               <TabsTrigger value="hub-applications">Innovation Hub</TabsTrigger>
+              <TabsTrigger value="scan-id">Scan ID</TabsTrigger>
               <TabsTrigger value="settings">Settings</TabsTrigger>
             </TabsList>
             
