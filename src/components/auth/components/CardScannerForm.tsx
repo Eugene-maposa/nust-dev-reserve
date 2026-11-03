@@ -18,7 +18,7 @@ interface Room {
   type: string;
 }
 
-const CardScannerForm = () => {
+const CardScannerForm = ({ initialCode, onRegistered }: { initialCode?: string; onRegistered?: (code: string) => void } = {}) => {
   const { toast } = useToast();
   const { signIn, user: currentUser, isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -59,11 +59,8 @@ const CardScannerForm = () => {
   // Look up user by scanned code (student_number or code field)
   const lookupUser = useCallback(async (code: string) => {
     try {
-      const { data: profile, error } = await supabase
-        .from('user_profiles')
-        .select('id, email, full_name, student_number, code')
-        .or(`student_number.eq.${code},code.eq.${code}`)
-        .maybeSingle();
+      const { data: rows, error } = await supabase.rpc('lookup_user_by_code' as never, { p_code: code } as never);
+      const profile = (Array.isArray(rows) ? (rows as unknown[])[0] : null) as { id: string; email: string; full_name: string | null } | null;
 
       if (error) {
         console.error('Error looking up user:', error);
@@ -93,6 +90,7 @@ const CardScannerForm = () => {
         setCameraEnabled(false);
         setScanState('notfound');
         if (!isAdmin) {
+          await supabase.rpc('report_unregistered_scan' as never, { p_code: code } as never);
           toast({
             title: 'User Not Found',
             description: 'This ID is not registered. Please see the administrator at the IBD office.',
@@ -287,6 +285,7 @@ const CardScannerForm = () => {
       }
 
       setScanState('registered');
+      onRegistered?.(scannedCode);
       toast({
         title: 'Person Registered',
         description: data?.warning || `An invitation email has been sent to ${regEmail}.`,
@@ -318,6 +317,14 @@ const CardScannerForm = () => {
     setRegPhone('');
     setRegRole('student');
   };
+
+  useEffect(() => {
+    if (initialCode) {
+      setScanState('found');
+      lookupUser(initialCode);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialCode]);
 
   // Manual code entry
   const [manualCode, setManualCode] = useState('');
@@ -616,7 +623,7 @@ const CardScannerForm = () => {
           ) : (
             <div className="text-center space-y-4">
               <p className="text-sm text-muted-foreground">
-                This ID card is not registered in the system. Please visit the IBD office at the Technovation Centre so an administrator can register you.
+                This ID card is not registered in the system. The administrator has been notified. Please visit the IBD office at the Technovation Centre to complete your registration.
               </p>
               <Button
                 type="button"

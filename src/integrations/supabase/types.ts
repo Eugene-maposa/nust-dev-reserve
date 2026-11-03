@@ -472,6 +472,27 @@ export type Database = {
         }
         Relationships: []
       }
+      unregistered_scans: {
+        Row: {
+          created_at: string
+          id: string
+          scanned_code: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          scanned_code: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          scanned_code?: string
+          status?: string
+        }
+        Relationships: []
+      }
       user_profiles: {
         Row: {
           code: string | null
@@ -577,6 +598,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      lookup_user_by_code: {
+        Args: { p_code: string }
+        Returns: {
+          email: string
+          full_name: string
+          id: string
+        }[]
+      }
+      report_unregistered_scan: { Args: { p_code: string }; Returns: undefined }
       reset_admin_password: {
         Args: { admin_email?: string; new_password?: string }
         Returns: undefined

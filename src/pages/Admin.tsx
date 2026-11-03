@@ -85,7 +85,7 @@ import { format } from 'date-fns';
 import ComprehensiveUserTable from '@/components/admin/ComprehensiveUserTable';
 import BlogManager from '@/components/admin/BlogManager';
 import DocumentManager from '@/components/admin/DocumentManager';
-import CardScannerForm from '@/components/auth/components/CardScannerForm';
+import ScanIdPanel from '@/components/admin/ScanIdPanel';
 
 // Types
 interface User {
@@ -1335,8 +1335,8 @@ const Admin = () => {
         </div>
 
         <Tabs defaultValue="comprehensive" className="space-y-4" onValueChange={setActiveTab}>
-          <div className="flex justify-between items-center">
-            <TabsList>
+          <div className="flex flex-wrap justify-between items-center gap-2">
+            <TabsList className="flex flex-wrap h-auto justify-start">
               <TabsTrigger value="comprehensive">Comprehensive Data</TabsTrigger>
               <TabsTrigger value="documents">Documents</TabsTrigger>
               <TabsTrigger value="blogs">Blog Management</TabsTrigger>
@@ -1806,14 +1806,7 @@ const Admin = () => {
               </TabsContent>
 
               <TabsContent value="scan-id" className="space-y-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Scan ID Card</CardTitle>
-                  </CardHeader>
-                  <CardContent className="max-w-md mx-auto">
-                    <CardScannerForm />
-                  </CardContent>
-                </Card>
+                <ScanIdPanel />
               </TabsContent>
 
               <TabsContent value="settings" className="space-y-4">
