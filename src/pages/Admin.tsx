@@ -1803,7 +1803,18 @@ const Admin = () => {
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
+              <TabsContent value="scan-id" className="space-y-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Scan ID Card</CardTitle>
+                  </CardHeader>
+                  <CardContent className="max-w-md mx-auto">
+                    <CardScannerForm />
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
               <TabsContent value="settings" className="space-y-4">
                 <Card>
                   <CardHeader>
