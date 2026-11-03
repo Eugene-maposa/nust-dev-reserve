@@ -85,6 +85,7 @@ import { format } from 'date-fns';
 import ComprehensiveUserTable from '@/components/admin/ComprehensiveUserTable';
 import BlogManager from '@/components/admin/BlogManager';
 import DocumentManager from '@/components/admin/DocumentManager';
+import CardScannerForm from '@/components/auth/components/CardScannerForm';
 
 // Types
 interface User {
