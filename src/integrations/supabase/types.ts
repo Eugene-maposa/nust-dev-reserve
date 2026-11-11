@@ -495,6 +495,7 @@ export type Database = {
       }
       user_profiles: {
         Row: {
+          approval_status: string
           code: string | null
           created_at: string
           email: string
@@ -509,6 +510,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          approval_status?: string
           code?: string | null
           created_at?: string
           email: string
@@ -523,6 +525,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          approval_status?: string
           code?: string | null
           created_at?: string
           email?: string
