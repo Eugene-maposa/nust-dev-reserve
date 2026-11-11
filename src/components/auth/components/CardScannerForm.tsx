@@ -18,7 +18,7 @@ interface Room {
   type: string;
 }
 
-const CardScannerForm = ({ initialCode, onRegistered }: { initialCode?: string; onRegistered?: (code: string) => void } = {}) => {
+const CardScannerForm = ({ initialCode, onRegistered, onRegisterWithCode }: { initialCode?: string; onRegistered?: (code: string) => void; onRegisterWithCode?: (code: string) => void } = {}) => {
   const { toast } = useToast();
   const { signIn, user: currentUser, isAdmin } = useAuth();
   const navigate = useNavigate();
@@ -89,14 +89,7 @@ const CardScannerForm = ({ initialCode, onRegistered }: { initialCode?: string; 
         setScannedCode(code);
         setCameraEnabled(false);
         setScanState('notfound');
-        if (!isAdmin) {
-          await supabase.rpc('report_unregistered_scan' as never, { p_code: code } as never);
-          toast({
-            title: 'User Not Found',
-            description: 'This ID is not registered. Please see the administrator at the IBD office.',
-            variant: 'destructive',
-          });
-        }
+
       }
     } catch (err) {
       console.error('Lookup error:', err);
@@ -623,8 +616,14 @@ const CardScannerForm = ({ initialCode, onRegistered }: { initialCode?: string; 
           ) : (
             <div className="text-center space-y-4">
               <p className="text-sm text-muted-foreground">
-                This ID card is not registered in the system. The administrator has been notified. Please visit the IBD office at the Technovation Centre to complete your registration.
+                This ID card is not registered yet. Create your account with this ID — the administrator will approve it before you can log in.
               </p>
+              {onRegisterWithCode && (
+                <Button type="button" className="w-full" onClick={() => onRegisterWithCode(scannedCode)}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Sign Up with this ID
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="outline"
