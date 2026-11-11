@@ -139,7 +139,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const signIn = async (email: string, password: string) => {
     try {
       const result = await supabase.auth.signInWithPassword({ email, password });
-      console.log('Sign in result:', result);
+      if (!result.error && result.data.user) {
+        const { data: profile } = await supabase
+          .from('user_profiles')
+          .select('approval_status')
+          .eq('id', result.data.user.id)
+          .maybeSingle();
+        const status = (profile as { approval_status?: string } | null)?.approval_status;
+        if (status === 'pending' || status === 'rejected') {
+          await supabase.auth.signOut();
+          const msg = status === 'pending'
+            ? 'Your account is waiting for approval by the administrator. You will be able to log in once it is approved.'
+            : 'Your registration was not approved. Please contact the IBD office.';
+          return { error: new Error(msg), data: null };
+        }
+      }
       return result;
     } catch (error) {
       console.error('Sign in error:', error);

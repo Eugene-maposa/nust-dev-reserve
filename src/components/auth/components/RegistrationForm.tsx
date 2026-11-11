@@ -6,12 +6,16 @@ import { useToast } from '@/hooks/use-toast';
 import { Mail, Lock, Loader2, Eye, EyeOff, User, CreditCard, Upload, X, ImageIcon } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import IdBarcodeScanner from './IdBarcodeScanner';
+import { ScanBarcode } from 'lucide-react';
 
 interface RegistrationFormProps {
   onBackToLogin: () => void;
+  initialCode?: string;
 }
 
-const RegistrationForm: React.FC<RegistrationFormProps> = ({ onBackToLogin }) => {
+const RegistrationForm: React.FC<RegistrationFormProps> = ({ onBackToLogin, initialCode }) => {
+  const [scanOpen, setScanOpen] = useState(false);
   const { toast } = useToast();
   const { signUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -19,7 +23,7 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onBackToLogin }) =>
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
-  const [idNumber, setIdNumber] = useState('');
+  const [idNumber, setIdNumber] = useState(initialCode || '');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
@@ -155,13 +159,13 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onBackToLogin }) =>
       if (data?.user && !data.session) {
         toast({
           title: 'Verify your email',
-          description: 'A verification link has been sent to your email. Please click the link to verify your account before logging in.',
+          description: 'A verification link has been sent to your email. After verifying, the administrator must approve your account before you can log in.',
           duration: 15000,
         });
       } else {
         toast({
           title: 'Registration successful',
-          description: 'Your account has been created.',
+          description: 'Your account has been created and is waiting for administrator approval.',
           duration: 8000,
         });
       }
@@ -250,7 +254,14 @@ const RegistrationForm: React.FC<RegistrationFormProps> = ({ onBackToLogin }) =>
           <CreditCard className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
           <Input id="reg-idnumber" placeholder="e.g. 63-123456A78" className="pl-10" value={idNumber} onChange={(e) => setIdNumber(e.target.value)} required />
         </div>
-        <p className="text-xs text-muted-foreground">This will be used for ID card barcode login</p>
+        {scanOpen ? (
+          <IdBarcodeScanner onCode={(c) => { setIdNumber(c); setScanOpen(false); toast({ title: 'ID scanned', description: c }); }} onClose={() => setScanOpen(false)} />
+        ) : (
+          <Button type="button" variant="secondary" size="sm" className="w-full" onClick={() => setScanOpen(true)}>
+            <ScanBarcode className="h-4 w-4 mr-2" />Scan ID barcode instead
+          </Button>
+        )}
+        <p className="text-xs text-muted-foreground">Scan the barcode on the back of your ID, or type the number if it won't scan</p>
       </div>
 
       {/* ID Image Uploads */}

@@ -132,6 +132,7 @@ const handler = async (req: Request): Promise<Response> => {
           phone,
           code: idCode,
           role,
+          approval_status: "approved",
         },
         { onConflict: "id" }
       );
