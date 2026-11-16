@@ -8,7 +8,7 @@ import { Check, X } from 'lucide-react';
 
 interface PendingUser {
   id: string; full_name: string | null; email: string; code: string | null;
-  id_front_url: string | null; id_back_url: string | null; created_at: string;
+  id_front_url: string | null; id_back_url: string | null; created_at: string; approval_status: string;
   frontSigned?: string | null; backSigned?: string | null;
 }
 
@@ -27,8 +27,8 @@ const PendingApprovalsPanel = () => {
     setLoading(true);
     const { data, error } = await (supabase as any)
       .from('user_profiles')
-      .select('id, full_name, email, code, id_front_url, id_back_url, created_at')
-      .eq('approval_status', 'pending')
+      .select('id, full_name, email, code, id_front_url, id_back_url, created_at, approval_status')
+      .in('approval_status', ['pending', 'rejected'])
       .order('created_at', { ascending: false });
     if (error) console.error(error);
     const rows: PendingUser[] = await Promise.all((data || []).map(async (u: PendingUser) => ({
@@ -62,24 +62,24 @@ const PendingApprovalsPanel = () => {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           New Users Awaiting Approval
-          {users.length > 0 && <Badge variant="destructive">{users.length}</Badge>}
+          {users.filter(u => u.approval_status === 'pending').length > 0 && <Badge variant="destructive">{users.filter(u => u.approval_status === 'pending').length}</Badge>}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
         {loading ? <p className="text-sm text-muted-foreground">Loading…</p> :
-         users.length === 0 ? <p className="text-sm text-muted-foreground">No one is waiting for approval.</p> :
+         users.length === 0 ? <p className="text-sm text-muted-foreground">No one is waiting for approval and no rejected sign-ups.</p> :
          users.map((u) => (
           <div key={u.id} className="rounded-md border p-4 space-y-3">
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div>
-                <p className="font-semibold">{u.full_name || '(no name)'}</p>
+                <p className="font-semibold">{u.full_name || '(no name)'} {u.approval_status === 'rejected' && <Badge variant="outline" className="ml-2">Rejected</Badge>}</p>
                 <p className="text-sm text-muted-foreground">{u.email}</p>
                 <p className="text-sm">ID: <span className="font-mono">{u.code || '—'}</span></p>
                 <p className="text-xs text-muted-foreground">Registered {new Date(u.created_at).toLocaleString()}</p>
               </div>
               <div className="flex gap-2">
                 <Button size="sm" onClick={() => decide(u.id, 'approved')}><Check className="h-4 w-4 mr-1" />Approve</Button>
-                <Button size="sm" variant="outline" onClick={() => decide(u.id, 'rejected')}><X className="h-4 w-4 mr-1" />Reject</Button>
+                {u.approval_status !== 'rejected' && <Button size="sm" variant="outline" onClick={() => decide(u.id, 'rejected')}><X className="h-4 w-4 mr-1" />Reject</Button>}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">

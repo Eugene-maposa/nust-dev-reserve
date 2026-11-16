@@ -306,7 +306,6 @@ const Admin = () => {
         .from('innovation_hub_applications')
         .update({ 
           status: 'approved',
-          approved_by: (await supabase.auth.getSession()).data.session?.user.id
         })
         .eq('id', applicationId);
 
@@ -2737,8 +2736,12 @@ const Admin = () => {
             <Button variant="outline" onClick={() => setIsApplicationDetailOpen(false)}>
               Close
             </Button>
-            {selectedApplication?.status === 'pending' && (
+            {selectedApplication && selectedApplication.status !== 'pending' && (
+              <span className="text-xs text-muted-foreground mr-auto self-center">Wrong decision? You can change it below.</span>
+            )}
+            {selectedApplication && (
               <>
+                {selectedApplication.status === 'pending' && (
                 <Button 
                   variant="outline"
                   onClick={() => {
@@ -2751,6 +2754,8 @@ const Admin = () => {
                 >
                   Request Review
                 </Button>
+                )}
+                {selectedApplication.status !== 'rejected' && (
                 <Button 
                   variant="destructive"
                   onClick={() => {
@@ -2761,6 +2766,8 @@ const Admin = () => {
                 >
                   Reject
                 </Button>
+                )}
+                {selectedApplication.status !== 'approved' && (
                 <Button 
                   onClick={() => {
                     handleApproveApplication(selectedApplication.id);
@@ -2769,6 +2776,7 @@ const Admin = () => {
                 >
                   Approve
                 </Button>
+                )}
               </>
             )}
           </DialogFooter>
